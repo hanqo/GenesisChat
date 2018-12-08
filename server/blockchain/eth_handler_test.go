@@ -42,10 +42,10 @@ func generateRawTx(client *ethclient.Client, priv string, to string) string{
 	rawTxBytes := ts.GetRlp(0)
 	rawTxHex := hex.EncodeToString(rawTxBytes)
 
-	fmt.Printf(rawTxHex)
+	fmt.Printf("raw tx hex: %s\n",rawTxHex)
 	return rawTxHex
 }
-
+//Cannot use name TestforwardRawTx, although the function name is forwardRawTx.
 func TestForwardRawTx(t *testing.T) {
 	client, err := ethclient.Dial("http://127.0.0.1:7545") //Ganache local address
 	priv := "4b62386099abd28f2b63d3a08918cbffc72f4752e3a029747f2a4681b28021c7"
@@ -56,7 +56,7 @@ func TestForwardRawTx(t *testing.T) {
 		log.Fatal(err)
 	}
 	rawTxData :=generateRawTx(client,priv,to)
-	h.ForwardRawTx(&MsgToChain{
+	h.forwardRawTx(&MsgToChain{
 		from :     addr,
 		user :     "test",
 		version :  "test",
@@ -67,10 +67,17 @@ func TestForwardRawTx(t *testing.T) {
 	             })
 	select {
 	case msg:= <-h.fromChains:
-		if msg.txReceipt.confirmed != false {
+		if msg.txReceipt.confirmed == false {
 			t.Error("Transaction not confirmed")
 		} else if msg.txReceipt.confirmed == true{
 		t.Log("Transaction confirmed")
+
+		fmt.Printf("txBlockNr: %d\n", msg.txReceipt.txBlockNr)
+		fmt.Printf("txBlockHash: %s\n", msg.txReceipt.txBlockHash)
+		fmt.Printf("txHash: %s\n", msg.txReceipt.txHash)
+		fmt.Printf("txIndex: %d\n", msg.txReceipt.txIndex)
+		fmt.Printf("gasUsed: %d\n", msg.txReceipt.gasUsed)
+
 		}
 	}
 

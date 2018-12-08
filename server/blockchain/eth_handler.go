@@ -64,17 +64,18 @@ func NewHandler() * Handler{
 		fromChains:make(chan *MsgFromChain,1),
 		done:make(chan bool, 1),
 	}
-	go h.Run()
+	go h.run()
 	return h
 }
 
-func (h *Handler) Run(){
+func (h *Handler) run(){
 	for{
 		select {
 			case msg := <- h.toChains:
+
 				switch {
 				case  msg.rawTx !=  nil:
-					go h.ForwardRawTx(msg)
+					go h.forwardRawTx(msg)
 				}
 		    case <-h.done:
 			 	log.Printf("Stop ETH hanlder")
@@ -83,7 +84,7 @@ func (h *Handler) Run(){
 	}
 }
 
-func (h *Handler) ForwardRawTx(r *MsgToChain){
+func (h *Handler) forwardRawTx(r *MsgToChain){
 
 	client := ethrpc.New(ethRPCAddr)
 
