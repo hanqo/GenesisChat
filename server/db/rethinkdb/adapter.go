@@ -608,6 +608,27 @@ func (a *adapter) TopicGet(topic string) (*t.Topic, error) {
 	return tt, nil
 }
 
+// kai
+func (a *adapter) TopicGetAll() ([]t.Topic, error) {
+  topics := []t.Topic{}
+  // Fetch all topics
+  if cursor, err := rdb.DB(a.dbName).Table("topics").GetAll().Run(a.conn); err == nil {
+    defer cursor.Close()
+
+    var topic t.Topic
+    for cursor.Next(&topic) {
+      topics = append(topics, topic)
+    }
+
+    if err = cursor.Err(); err != nil {
+      return nil, err
+    }
+  } else {
+    return nil, err
+  }
+  return topics, nil
+}
+
 // TopicsForUser loads user's contact list: p2p and grp topics, except for 'me' & 'fnd' subscriptions.
 // Reads and denormalizes Public value.
 func (a *adapter) TopicsForUser(uid t.Uid, keepDeleted bool, opts *t.QueryOpt) ([]t.Subscription, error) {

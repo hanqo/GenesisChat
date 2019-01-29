@@ -382,6 +382,11 @@ func (TopicsObjMapper) Get(topic string) (*types.Topic, error) {
 	return adp.TopicGet(topic)
 }
 
+// kai: Get all topics avaialbe
+func (TopicsObjMapper) GetAll(topic string) ([]types.Topic, error) {
+	return adp.TopicGetAll()
+}
+
 // GetUsers loads subscriptions for topic plus loads user.Public
 func (TopicsObjMapper) GetUsers(topic string, opts *types.QueryOpt) ([]types.Subscription, error) {
 	return adp.UsersForTopic(topic, false, opts)
