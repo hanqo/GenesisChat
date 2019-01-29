@@ -609,10 +609,12 @@ func (a *adapter) TopicGet(topic string) (*t.Topic, error) {
 }
 
 // kai
-func (a *adapter) TopicGetAll() ([]t.Topic, error) {
+func (a *adapter) TopicGetAllGroups() ([]t.Topic, error) {
   topics := []t.Topic{}
   // Fetch all topics
-  if cursor, err := rdb.DB(a.dbName).Table("topics").GetAll().Run(a.conn); err == nil {
+  if cursor, err := rdb.DB(a.dbName).Table("topics").Filter(func(row rdb.Term) rdb.Term {
+                      return row.Field("Id").Match("^grp")
+                    }).Run(a.conn); err == nil {
     defer cursor.Close()
 
     var topic t.Topic

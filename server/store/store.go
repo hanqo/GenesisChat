@@ -382,9 +382,9 @@ func (TopicsObjMapper) Get(topic string) (*types.Topic, error) {
 	return adp.TopicGet(topic)
 }
 
-// kai: Get all topics avaialbe
-func (TopicsObjMapper) GetAll(topic string) ([]types.Topic, error) {
-	return adp.TopicGetAll()
+// kai: Get all group topics avaialbe
+func (TopicsObjMapper) GetAllGroups() ([]types.Topic, error) {
+	return adp.TopicGetAllGroups()
 }
 
 // GetUsers loads subscriptions for topic plus loads user.Public

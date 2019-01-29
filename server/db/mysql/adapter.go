@@ -803,11 +803,6 @@ func (a *adapter) TopicGet(topic string) (*t.Topic, error) {
 	return tt, nil
 }
 
-func (a *adapter) TopicGetAll() ([]t.Topic, error) {
-  return nil, nil
-}
-
-
 // TopicsForUser loads user's contact list: p2p and grp topics, except for 'me' & 'fnd' subscriptions.
 // Reads and denormalizes Public value.
 func (a *adapter) TopicsForUser(uid t.Uid, keepDeleted bool, opts *t.QueryOpt) ([]t.Subscription, error) {

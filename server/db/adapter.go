@@ -80,8 +80,8 @@ type Adapter interface {
 	TopicCreateP2P(initiator, invited *t.Subscription) error
 	// TopicGet loads a single topic by name, if it exists. If the topic does not exist the call returns (nil, nil)
 	TopicGet(topic string) (*t.Topic, error)
-  // kai: TopicGetAll gets all the topics available
-	TopicGetAll() ([]t.Topic, error)
+  // kai: TopicGetAllGroups gets all group topics available
+	TopicGetAllGroups() ([]t.Topic, error)
 	// TopicsForUser loads subscriptions for a given user. Reads public value.
 	TopicsForUser(uid t.Uid, keepDeleted bool, opts *t.QueryOpt) ([]t.Subscription, error)
 	// UsersForTopic loads users' subscriptions for a given topic. Public is loaded.

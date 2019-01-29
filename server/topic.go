@@ -14,7 +14,6 @@ import (
   "sort"
   "sync/atomic"
   "time"
-  "strings"
 
   "github.com/tinode/chat/server/auth"
   "github.com/tinode/chat/server/push"
@@ -1465,8 +1464,9 @@ func (t *Topic) replyGetSub(sess *Session, asUid types.Uid, authLevel auth.Level
   var subs []types.Subscription
   var err error
   var isSharer bool
-  var alltopics []types.Topic
 
+  // the group topics retrieved from db
+  var grptopics []types.Topic
   // the final output
   var mtss []MsgTopicSub
 
@@ -1490,28 +1490,25 @@ func (t *Topic) replyGetSub(sess *Session, asUid types.Uid, authLevel auth.Level
     isSharer = true
 
     // kai: for meTopic we first get available topics
-    alltopics, err = store.Topics.GetAll("not used")
+    grptopics, err = store.Topics.GetAllGroups()
 
     if err != nil {
       sess.queueOut(decodeStoreError(err, id, t.original(asUid), now, nil))
       return err
     }
 
-    var sub types.Subscription
     var mts MsgTopicSub
 
-    for i := range alltopics {
-      top := &alltopics[i]
+    for i := range grptopics {
+      gt := &grptopics[i]
       
-      // we are only interested in group topics (so not me, fnd, p2p)
-      if !strings.HasPrefix(top.Id, "grp") {
-        continue
-      }
-
       // convert types.Topic to MsgTopicSub
-      mts.Topic = top.Id // name
-      mts.DeletedAt = top.DeletedAt
-      mts.TouchedAt = top.TouchedAt
+      mts.Topic = gt.Id // name
+      mts.DeletedAt = gt.DeletedAt
+      mts.TouchedAt = gt.TouchedAt
+      // set public data which includes the name and maybe image
+      // do not set Private field
+      mts.Public = gt.Public
       mts.SeqId = -1 // important, we use this to identify that if it's user's sub or not
       mtss = append(mtss, mts)
     }
