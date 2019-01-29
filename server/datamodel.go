@@ -379,6 +379,7 @@ type MsgTopicSub struct {
 	// Timestamp of the last message in the topic.
 	TouchedAt *time.Time `json:"touched,omitempty"`
 	// ID of the last {data} message in a topic
+  // kai: we use this SeqId to represent if the user has subscribed the topic or not
 	SeqId int `json:"seq,omitempty"`
 	// Id of the latest Delete operation
 	DelId int `json:"clear,omitempty"`
@@ -464,6 +465,7 @@ type MsgServerMeta struct {
 	// Topic description
 	Desc *MsgTopicDesc `json:"desc,omitempty"`
 	// Subscriptions as an array of objects
+  // kai: in our case we return a list of all available topics
 	Sub []MsgTopicSub `json:"sub,omitempty"`
 	// Delete ID and the ranges of IDs of deleted messages
 	Del *MsgDelValues `json:"del,omitempty"`
