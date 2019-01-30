@@ -1562,17 +1562,17 @@ func (t *Topic) replyGetSub(sess *Session, asUid types.Uid, authLevel auth.Level
 
   meta := &MsgServerMeta{Id: id, Topic: t.original(asUid), Timestamp: &now}
 
-  // kai: in this case the user doesn't sub any group topic
-  if len(subs) == 0 && len(mtss) > 0 {
+  // kai: it seems we cannot simply use if len(subs) >= 0, as we have to consider
+  //      the TopicCatFnd case
+  if t.cat == types.TopicCatMe && len(mtss) > 0 && len(subs) == 0 {
     meta.Sub = mtss
     sess.queueOut(&ServerComMessage{Meta: meta})
     return nil
-  } else if len(mtss) == 0 {
+  } else if t.cat == types.TopicCatMe && len(mtss) == 0 {
     // there's no group topic in system at all
     sess.queueOut(NoErr(id, t.original(asUid), now))
     return nil
   } else if len(subs) > 0 {
-    // meta.Sub = make([]MsgTopicSub, 0, len(subs))
     for i := range subs {
       sub := &subs[i]
       // Indicator if the requester has provided a cut off date for ts of pub & priv updates.
@@ -1689,7 +1689,6 @@ func (t *Topic) replyGetSub(sess *Session, asUid types.Uid, authLevel auth.Level
         }
       }
 
-      //meta.Sub = append(meta.Sub, mts)
       mtss = append(mtss, mts)
     }
 
