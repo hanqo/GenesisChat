@@ -417,6 +417,12 @@ type photoStruct struct {
 type vcard struct {
 	Fn    string       `json:"fn" db:"fn"`
 	Photo *photoStruct `json:"photo,omitempty" db:"photo"`
+  GroupRuleName string `json:"groupRuleName" db:"groupRuleName"`
+  EconomicRule string `json:"economicRule" db:"economicRule"`
+  RequiredApproved float32 `json:"requiredApproved" db:"requiredApproved"`
+  RequiredHour float64 `json:"requiredHour" db:"requiredHour"`
+  GroupWebsitePrefix string `json:"groupWebsitePrefix" db:"groupWebsitePrefix"`
+  VoteCost uint64 `json:"voteCost" db:"voteCost"`
 }
 
 // {"fn": "Alice Johnson", "photo": "alice-128.jpg"}
@@ -441,5 +447,11 @@ func parsePublic(public *vCardy, path string) *vcard {
 		}
 	}
 
-	return &vcard{Fn: public.Fn, Photo: photo}
+	return &vcard{Fn: public.Fn, Photo: photo,
+                GroupRuleName : public.GroupRuleName,
+                EconomicRule : public.EconomicRule,
+                RequiredApproved : public.RequiredApproved,
+                RequiredHour : public.RequiredHour,
+                GroupWebsitePrefix : public.GroupWebsitePrefix,
+                VoteCost : public.VoteCost}
 }

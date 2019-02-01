@@ -125,7 +125,8 @@
    "name": "*ABC",
    "owner": "carol",
    "tags": ["flower", "flowers", "flora"],
-   "public": {"fn": "Let's talk about flowers", "photo": "abc-64.jpg", "type": "jpg"}
+   "public": {"fn": "Let's talk about flowers", "photo": "abc-64.jpg", "type": "jpg", "groupRuleName": "unknown_grn", "EconomicRule": "unknown_er",
+              "requiredApproved": 0.0, "requiredHour": 0.0, "groupWebsitePrefix": "unknown_gwp", "voteCost": 0}
   },
   {
    "createdAt": "-126h",
