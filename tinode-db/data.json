@@ -151,65 +151,6 @@
    "access": {"auth": "JRWP", "anon": "JW"}
   }
  ],
- "p2psubs": [
-  {
-   "createdAt": "-120h",
-   "users": [{"name": "alice"}, {"name": "bob", "private": {"comment": "Alice Jo"}}]
-  },
-  {
-   "createdAt": "-119h",
-   "users": [{"name": "alice"}, {"name": "carol", "private": {"comment": "Alice Joha"}}]
-  },
-  {
-   "createdAt": "-118h",
-   "users": [{"name": "alice"}, {"name": "dave", "private": {"comment": "Alice not in Wunderland"}}]
-  },
-  {
-   "createdAt": "-117h",
-   "private": {"comment": "apples to oranges"},
-   "users": [{"name": "alice", "private": {"comment": "Apples"}},
-             {"name": "eve", "private": {"comment": "Alice is not what she seems"}}]
-  },
-  {
-   "createdAt": "-116h",
-   "users": [{"name": "alice", "private": {"comment": "Frank Frank Frank a-\u003ef"}},
-             {"name": "frank", "private": {"comment": "Johnson f-\u003ea"}}]
-  },
-  {
-   "createdAt": "-115.5h",
-   "users": [{"name": "alice", "private": {"comment": "Python chatbot, short and stout"}}, {"name": "tino"}]
-  },
-  {
-   "createdAt": "-114h",
-   "users": [{"name": "bob", "private": {"comment": "I'm banned by Dave!"}, "have": "A"},
-             {"name": "dave", "private": {"comment": "I banned Bob."}, "want": "N"}]
-  },
-  {
-   "createdAt": "-113.5h",
-   "users": [{"name": "bob", "private": {"comment": "Eve nee Ng"}}, {"name": "eve"}]
-  },
-  {
-   "createdAt": "-113.45h",
-   "users": [{"name": "bob", "private": {"comment": "Python chatbot, short and stout"}}, {"name": "tino"}]
-  },
-  {
-   "createdAt": "-113.3h",
-   "users": [{"name": "carol", "private": {"comment": "Python chatbot, short and stout"}}, {"name": "tino"}]
-  },
-  {
-   "createdAt": "-112.7h",
-   "private": {"comment": "Python chatbot short and stout"},
-   "users": [{"name": "dave", "private": {"comment": "Python chatbot, short and stout"}}, {"name": "tino"}]
-  },
-  {
-   "createdAt": "-112.3h",
-   "users": [{"name": "eve", "private": {"comment": "Python chatbot, short and stout"}}, {"name": "tino"}]
-  },
-  {
-   "createdAt": "-112.1h",
-   "users": [{"name": "frank", "private": {"comment": "Python chatbot, short and stout"}}, {"name": "tino"}]
-  }
- ],
  "groupsubs": [{
    "createdAt": "-112h",
    "private": {"comment": "My super cool group topic"},
