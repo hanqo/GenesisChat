@@ -162,6 +162,36 @@ type MsgClientSub struct {
 	Get *MsgGetQuery `json:"get,omitempty"`
 }
 
+// kai: smart contract related typedefs
+
+// MsgClientCon is a {con} message which represents client operation to smart contract
+// probably no need to define structs like MsgConDeploy MsgConGet MsgConSet as they have similar structs
+type MsgClientCon struct {
+  // what to do, one of these: deploy, get, set
+  What string `json:"what"`
+
+  // message Id
+  Id string `json:"id,omitempty"`
+  // User that initiates the action
+  User string `json:"user"`
+  // (group) topic that this operation is related to
+  Topic string `json:"topic"`
+  // the public address
+  From string `json:"from"`
+  // version -- current unused
+  Version string `json:"version,omitempty"`
+  // chainID
+  ChainID int `json:"chainid,omitempty"`
+  // the address of the contract, ignored if what == deploy
+  Addr string `json:"addr,omitempty"`
+  // Function name: ignored if what == deploy as it's always referred to ctor
+  Fn string `json:"fn,omitempty"`
+  // args to the functions
+  Inputs []string `json:"inputs,omitempty"`
+  // value (optional) if what == get, see MsgCall struct
+  Value int64 `json:"value,omitempty"`
+}
+
 const (
 	constMsgMetaDesc = 1 << iota
 	constMsgMetaSub
@@ -284,6 +314,7 @@ type ClientComMessage struct {
 	Set   *MsgClientSet   `json:"set"`
 	Del   *MsgClientDel   `json:"del"`
 	Note  *MsgClientNote  `json:"note"`
+	Con   *MsgClientCon   `json:"con"`
 
 	// Message ID denormalized
 	id string
