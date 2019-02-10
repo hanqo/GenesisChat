@@ -44,6 +44,7 @@ import (
 	_ "github.com/tinode/chat/server/push/stdout"
 
 	"github.com/tinode/chat/server/store"
+	chain "github.com/tinode/chat/server/blockchain"
 
 	// Credential validators
 	_ "github.com/tinode/chat/server/validate/email"
@@ -111,6 +112,8 @@ type credValidator struct {
 
 var globals struct {
 	hub          *Hub
+  // handler to communicate with eth, should be one per app
+  chainHandler *chain.ETHHandler
 	sessionStore *SessionStore
 	cluster      *Cluster
 	grpcServer   *grpc.Server
@@ -406,6 +409,8 @@ func main() {
 	globals.sessionStore = NewSessionStore(idleSessionTimeout + 15*time.Second)
 	// The hub (the main message router)
 	globals.hub = newHub()
+  // the chain handler
+  globals.chainHandler = chain.NewETHHandler()
 
 	// Start accepting cluster traffic.
 	if globals.cluster != nil {

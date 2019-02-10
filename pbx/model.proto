@@ -251,6 +251,21 @@ message ClientNote {
 	int32 seq_id = 3;
 }
 
+// Kai: ClientCon is a client-generated msg to interact with smart contracts
+message ClientCon {
+	string what = 1;
+	string id = 2;
+	string user = 3;
+	string topic = 4;
+	string from = 5;
+	string version = 6;
+	int32 chainID = 7;
+	string addr = 8;
+	string fn = 9;
+	repeated string inputs = 10;
+	int64 value = 11;
+}
+
 message ClientMsg {
 	oneof Message {
 		ClientHi hi = 1;
@@ -263,10 +278,11 @@ message ClientMsg {
 		ClientSet set = 8;
 		ClientDel del = 9;
 		ClientNote note = 10;
+		ClientCon con = 11;
 	}
 	// Root user may send messages on behalf of other users.
-	string on_behalf_of = 11;
-	AuthLevel auth_level = 12;
+	string on_behalf_of = 12;
+	AuthLevel auth_level = 13;
 }
 
 // ************************

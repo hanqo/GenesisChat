@@ -275,6 +275,19 @@ func pbCliSerialize(msg *ClientComMessage) *pbx.ClientMsg {
 			Topic: msg.Note.Topic,
 			What:  pbInfoNoteWhatSerialize(msg.Note.What),
 			SeqId: int32(msg.Note.SeqId)}}
+	case msg.Con != nil:
+		pkt.Message = &pbx.ClientMsg_Con{Con: &pbx.ClientCon{
+			What: msg.Con.What,
+			Id: msg.Con.Id,
+			User: msg.Con.User,
+			Topic: msg.Con.Topic,
+			From: msg.Con.From,
+			Version: msg.Con.Version,
+			ChainID: int32(msg.Con.ChainID),
+			Addr: msg.Con.Addr,
+			Fn: msg.Con.Fn,
+			Inputs: msg.Con.Inputs,
+			Value: msg.Con.Value}}
 	}
 
 	if pkt.Message == nil {
@@ -379,7 +392,21 @@ func pbCliDeserialize(pkt *pbx.ClientMsg) *ClientComMessage {
 		case pbx.InfoNote_KP:
 			msg.Note.What = "kp"
 		}
-	}
+  } else if con := pkt.GetCon(); con != nil {
+    msg.Con = &MsgClientCon{
+        What: con.GetWhat(),
+        Id:   con.GetId(),
+        User: con.GetUser(),
+        Topic: con.GetTopic(),
+        From: con.GetFrom(),
+        Version: con.GetVersion(),
+        ChainID: int(con.GetChainID()),
+        Addr: con.GetAddr(),
+        Fn: con.GetFn(),
+        Inputs: con.GetInputs(),
+          Value: con.GetValue(),
+    }
+  }
 
 	msg.from = pkt.GetOnBehalfOf()
 	msg.authLvl = int(pkt.GetAuthLevel())
