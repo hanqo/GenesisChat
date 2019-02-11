@@ -1185,6 +1185,35 @@ func (a *adapter) MessageSave(msg *t.Message) error {
 	return err
 }
 
+// kai
+func (a *adapter) MessageGetLast(topic string) (t.Message, error) {
+
+  var lower, upper interface{}
+  var msg t.Message
+
+  upper = rdb.MaxVal
+  lower = rdb.MinVal
+
+  lower = []interface{}{topic, lower}
+  upper = []interface{}{topic, upper}
+
+  cursor, err := rdb.DB(a.dbName).Table("messages").
+    Between(lower, upper, rdb.BetweenOpts{Index: "Topic_SeqId"}).
+    OrderBy(rdb.OrderByOpts{Index: rdb.Desc("Topic_SeqId")}).
+    Filter(rdb.Row.HasFields("DelId").Not()).
+    Limit(1).Run(a.conn)
+
+  if err != nil {
+    return msg, err
+  }
+
+  defer cursor.Close()
+
+  cursor.Next(&msg)
+
+  return msg, nil
+}
+
 func (a *adapter) MessageGetAll(topic string, forUser t.Uid, opts *t.QueryOpt) ([]t.Message, error) {
 
 	var limit = maxResults

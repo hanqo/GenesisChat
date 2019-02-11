@@ -80,7 +80,7 @@ type Adapter interface {
 	TopicCreateP2P(initiator, invited *t.Subscription) error
 	// TopicGet loads a single topic by name, if it exists. If the topic does not exist the call returns (nil, nil)
 	TopicGet(topic string) (*t.Topic, error)
-  // kai: TopicGetAllGroups gets all group topics available
+	// kai: TopicGetAllGroups gets all group topics available
 	TopicGetAllGroups() ([]t.Topic, error)
 	// TopicsForUser loads subscriptions for a given user. Reads public value.
 	TopicsForUser(uid t.Uid, keepDeleted bool, opts *t.QueryOpt) ([]t.Subscription, error)
@@ -123,6 +123,8 @@ type Adapter interface {
 
 	// MessageSave saves message to database
 	MessageSave(msg *t.Message) error
+	// kai: MesssageGetLast returns the last message for some topic
+	MessageGetLast(topic string) (t.Message, error)
 	// MessageGetAll returns messages matching the query
 	MessageGetAll(topic string, forUser t.Uid, opts *t.QueryOpt) ([]t.Message, error)
 	// MessageDeleteList marks messages as deleted.

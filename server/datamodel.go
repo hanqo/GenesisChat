@@ -396,6 +396,8 @@ type MsgTopicSub struct {
 	Public interface{} `json:"public,omitempty"`
 	// User's own private data per topic
 	Private interface{} `json:"private,omitempty"`
+  // kai: Last message of this topic (visible for all users)
+	LastMsg interface{} `json:"lastmsg,omitempty"`
 
 	// Response to non-'me' topic
 

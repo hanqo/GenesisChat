@@ -558,6 +558,11 @@ func (MessagesObjMapper) GetAll(topic string, forUser types.Uid, opt *types.Quer
 	return adp.MessageGetAll(topic, forUser, opt)
 }
 
+// GetLast returns last message if available
+func (MessagesObjMapper) GetLast(topic string) (types.Message, error) {
+	return adp.MessageGetLast(topic)
+}
+
 // GetDeleted returns the ranges of deleted messages and the largest DelId reported in the list.
 func (MessagesObjMapper) GetDeleted(topic string, forUser types.Uid, opt *types.QueryOpt) ([]types.Range, int, error) {
 	dmsgs, err := adp.MessageGetDeleted(topic, forUser, opt)

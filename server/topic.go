@@ -1509,6 +1509,10 @@ func (t *Topic) replyGetSub(sess *Session, asUid types.Uid, authLevel auth.Level
       // set public data which includes the name and maybe image
       // do not set Private field
       mts.Public = gt.Public
+      msg, err := store.Messages.GetLast(gt.Id)
+      if err == nil {
+        mts.LastMsg = msg.Content
+      }
       mts.SeqId = -1 // important, we use this to identify that if it's user's sub or not
       mtss = append(mtss, mts)
     }

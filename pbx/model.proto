@@ -315,6 +315,7 @@ message TopicSub {
 	int32 recv_id = 6;
 	bytes public  = 7;
 	bytes private = 8;
+	bytes lastmsg = 16;
 
 	// Response to non-'me' topic
 
