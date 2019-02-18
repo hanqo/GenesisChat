@@ -23,6 +23,8 @@ import (
 	"github.com/tinode/chat/server/auth"
 	"github.com/tinode/chat/server/store"
 	"github.com/tinode/chat/server/store/types"
+
+	bc "github.com/tinode/chat/server/blockchain"
 )
 
 // Wire transport
@@ -337,6 +339,11 @@ func (s *Session) dispatch(msg *ClientComMessage) {
 		handler = s.note
 		msg.topic = msg.Note.Topic
 		uaRefresh = true
+
+	case msg.Con != nil:
+		handler = checkVers(msg, checkUser(msg, s.con))
+		msg.id = msg.Con.Id
+		msg.topic = msg.Con.Topic
 
 	default:
 		// Unknown message
@@ -1171,6 +1178,59 @@ func (s *Session) note(msg *ClientComMessage) {
 	} else if globals.cluster.isRemoteTopic(expanded) {
 		// The topic is handled by a remote node. Forward message to it.
 		globals.cluster.routeToTopic(msg, expanded, s)
+	}
+}
+
+// kai: the con message from client
+func (s *Session) con(msg *ClientComMessage) {
+	
+	if msg.topic == "" {
+		log.Println("we get a con msg but topic name is empty")
+		return
+	}
+
+	// check if eth handler is working
+	if globals.bcHandlers[msg.topic] == nil {
+		log.Println("we get a con msg but eth handler is not running")
+		// todo maybe re-create handlers here
+		return
+	}
+
+	h := globals.bcHandlers[msg.topic]
+
+	switch msg.Con.What {
+	case "deploy":
+		h.toChains <- &bc.MsgToChain {
+			from: msg.Con.From,
+			user: msg.Con.User,
+			verson: msg.Con.Version,
+			chainID: msg.Con.ChainID,
+			typ: "request_tx",
+			requestTx: &MsgContractFunc {
+				function: msg.Con.Fn,
+				inputs: msg.Con.Inputs,
+			},
+		}
+
+		// use goroutine to do async handling
+		go func(h *bc.ETHHandler, s *Session, msg *ClientComMessage) {
+			for {
+				case msg := <-h.fromChains
+				if msg.txSent != nil {
+				} else if msg.txReceipt != nil {
+					if msg.txReceipt.contractAddr == nil {
+						log.Println("deploy failed: contract address is nil")
+						s.queueOut(ErrContractDeployFailed(msg.id, msg.topic, msg.timestamp))
+						return
+					}
+					log.Printf("deploy contract ok, hash = %s, gas = %d, contract address = %s",
+										 msg.txReceipt.txHash,
+										 msg.txReceipt.gasUsed,
+										 *msg.txReceipt.contractAddr)
+				}
+			}
+		}(h, s, msg)
+	case 
 	}
 }
 

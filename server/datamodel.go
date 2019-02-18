@@ -498,7 +498,7 @@ type MsgServerMeta struct {
 	// Topic description
 	Desc *MsgTopicDesc `json:"desc,omitempty"`
 	// Subscriptions as an array of objects
-  // kai: in our case we return a list of all available topics
+  // kai: in our case we return a list of all available topics if topic == me
 	Sub []MsgTopicSub `json:"sub,omitempty"`
 	// Delete ID and the ranges of IDs of deleted messages
 	Del *MsgDelValues `json:"del,omitempty"`
@@ -894,6 +894,16 @@ func ErrVersionNotSupported(id, topic string, ts time.Time) *ServerComMessage {
 		Id:        id,
 		Code:      http.StatusHTTPVersionNotSupported, // 505
 		Text:      "version not supported",
+		Topic:     topic,
+		Timestamp: ts}}
+}
+
+// ErrContractDeployFailed indicates the smart contract deployment is failed (503)
+func ErrContractDeployFailed(id, topic string, ts time.Time) *ServerComMessage {
+	return &ServerComMessage{Ctrl: &MsgServerCtrl{
+		Id:        id,
+		Code:      http.StatusServiceUnavailable, // 503
+		Text:      "contract deploy failed",
 		Topic:     topic,
 		Timestamp: ts}}
 }
