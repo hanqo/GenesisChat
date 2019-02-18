@@ -517,6 +517,42 @@ type MsgServerInfo struct {
 	SeqId int `json:"seq,omitempty"`
 }
 
+// kai: MsgServerConRes is the server-side response to the smart contract msg
+type MsgServerConRes struct {
+	Topic string `json:"topic"`
+	// type of the conres, could be one of "deploy, get, set"
+	What string `json:"what"`
+
+	// the following is only valid when sending a tx (i.e. deploy and set)
+	// just lazy to make a struct for each type
+
+	// see MsgTxSent struct
+	// the tx hash if any
+	TxHash string `json:"txhash,omitempty"`
+	// the gas price
+	GasPrice int64 `json:"gasprice,omitempty"`
+	// nonce
+	Nonce uint64 `json:"nonce,omitempty"`
+	// the estimated gas amount
+	GasEstimated uint64 `json:"gasestimated,omitempty"`
+
+	// see MsgTxReceipt struct
+	// acutal used gas amount
+	GasUsed uint64 `json:"gasused,omitempty"`
+	// contract addr, especially for deployment
+	ConAddr string `json:"conaddr,omitempty"`
+	// if this tx is confirmed
+	Confirmed bool `json:"confirmed,omitempty"`
+
+	// the following is valid when querying a contract (get)
+
+	// see MsgCallReturn struct
+	// the function name that is queried
+	Fn string `json:"fn,omitempty"`
+	// the output
+	Output string `json:"output,omitempty"`
+}
+
 // ServerComMessage is a wrapper for server-side messages.
 type ServerComMessage struct {
 	Ctrl *MsgServerCtrl `json:"ctrl,omitempty"`
@@ -524,6 +560,7 @@ type ServerComMessage struct {
 	Meta *MsgServerMeta `json:"meta,omitempty"`
 	Pres *MsgServerPres `json:"pres,omitempty"`
 	Info *MsgServerInfo `json:"info,omitempty"`
+	ConRes *MsgServerConRes `json:"conres,omitempty"`
 
 	// MsgServerData has no Id field, copying it here for use in {ctrl} aknowledgements
 	id string

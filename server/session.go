@@ -1215,7 +1215,8 @@ func (s *Session) con(msg *ClientComMessage) {
 		// use goroutine to do async handling
 		go func(h *bc.ETHHandler, s *Session, msg *ClientComMessage) {
 			for {
-				case msg := <-h.fromChains
+				msg := <-h.fromChains
+
 				if msg.txSent != nil {
 				} else if msg.txReceipt != nil {
 					if msg.txReceipt.contractAddr == nil {
@@ -1227,6 +1228,18 @@ func (s *Session) con(msg *ClientComMessage) {
 										 msg.txReceipt.txHash,
 										 msg.txReceipt.gasUsed,
 										 *msg.txReceipt.contractAddr)
+					var res *ServerComMessage
+					res.ConRes = &MsgServerConRes {
+						Topic: msg.topic,
+						What: "deploy",
+						Tx: msg.txReceipt.txHash,
+						GasUsed: msg.txReceipt.gasUsed,
+						ConAddr: *msg.txReceipt.contractAddr,
+						Confirmed: true,
+					}
+					res.id = msg.id
+					res.timestamp = msg.timestamp
+					s.queueOut(res)
 				}
 			}
 		}(h, s, msg)
