@@ -49,7 +49,7 @@ type MsgTxSent struct {
 	TxHash       string
 	GasPrice     int64
 	Nonce        uint64
-	gasEstimated uint64
+	GasEstimated uint64
 }
 
 type MsgCallReturn struct {

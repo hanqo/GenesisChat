@@ -1258,69 +1258,69 @@ func (s *Session) con(msg *ClientComMessage) {
 
 	switch msg.Con.What {
 	case "deploy":
-		h.toChains <- &bc.MsgToChain {
-			from: msg.Con.From,
-			user: msg.Con.User,
-			verson: msg.Con.Version,
-			chainID: msg.Con.ChainID,
-			typ: "request_tx",
-			requestTx: &MsgContractFunc {
-				function: msg.Con.Fn,
-				inputs: msg.Con.Inputs,
+		h.ToChains <- &bc.MsgToChain {
+			From: msg.Con.From,
+			User: msg.Con.User,
+			Version: msg.Con.Version,
+			ChainID: msg.Con.ChainID,
+			Typ: "request_tx",
+			RequestTx: &bc.MsgContractFunc {
+				Function: msg.Con.Fn,
+				Inputs: msg.Con.Inputs,
 			},
 		}
 
 		// use goroutine to do async handling
 		go func(h *bc.ETHHandler, s *Session, msg *ClientComMessage) {
 			for {
-				msg := <-h.fromChains
+				m := <-h.FromChains
 
-				if msg.txInfo != nil {
+				if m.TxInfo != nil {
 					// we get the tx info needed to construct a tx
-					if msg.txInfo.gasPrice <= 0 ||
-						 msg.txInfo.nonce <= 0 ||
-						 msg.txInfo.data == nil {
+					if m.TxInfo.GasPrice <= 0 ||
+						 m.TxInfo.Nonce <= 0 ||
+						 m.TxInfo.Data == nil {
 						log.Println("unabled to construct tx")
 						s.queueOut(ErrContractDeployFailed(msg.id, msg.topic, msg.timestamp))
 						return
 					}
 
-					tx := createTxForDeploy(5000000, msg.txInfo.gasPrice, msg.txInfo.nonce, msg.txInfo.data)
-					h.toChains <- &MsgToChain {
-						from: msg.Con.From,
-						user: msg.Con.User,
-						verson: msg.Con.Version,
-						chainID: msg.Con.ChainID,
-						typ: "signed_tx",
-						signedTx:  &tx,
+					tx := createTxForDeploy(5000000, m.TxInfo.GasPrice, m.TxInfo.Nonce, m.TxInfo.Data)
+					h.ToChains <- &bc.MsgToChain {
+						From: msg.Con.From,
+						User: msg.Con.User,
+						Version: msg.Con.Version,
+						ChainID: msg.Con.ChainID,
+						Typ: "signed_tx",
+						SignedTx:  &tx,
 					}
-				} else if msg.txSent != nil {
+				} else if m.TxSent != nil {
 					// tx was sent (but not confirmed yet)
 					log.Printf("deploy contract tx sent, hash = %s, gasPrice = %d, nonce = %d, gasEstimated = %d",
-										 msg.txSent.txHash,
-										 msg.txSent.gasPrice,
-										 msg.txSent.nonce,
-										 msg.txSent.gasEstimated)
+										 m.TxSent.TxHash,
+										 m.TxSent.GasPrice,
+										 m.TxSent.Nonce,
+										 m.TxSent.GasEstimated)
 					var res *ServerComMessage
 					res = createConRes(msg.id, msg.timestamp, msg.topic, "deploy",
-														 msg.txSent.txHash, msg.txSent.gasPrice, msg.txSent.nonce,
-														 msg.txSent.gasEstimated, 0, "", false, "", "")
+														 m.TxSent.TxHash, m.TxSent.GasPrice, m.TxSent.Nonce,
+														 m.TxSent.GasEstimated, 0, "", false, "", "")
 					s.queueOut(res)
-				} else if msg.txReceipt != nil {
+				} else if m.TxReceipt != nil {
 					// we get the tx receipt
-					if msg.txReceipt.contractAddr == nil {
+					if m.TxReceipt.ContractAddr == nil {
 						log.Println("deploy failed: contract address is nil")
 						s.queueOut(ErrContractDeployFailed(msg.id, msg.topic, msg.timestamp))
 						return
 					}
 					log.Printf("deploy contract ok, hash = %s, gas = %d, contract address = %s",
-										 msg.txReceipt.txHash,
-										 msg.txReceipt.gasUsed,
-										 *msg.txReceipt.contractAddr)
+										 m.TxReceipt.TxHash,
+										 m.TxReceipt.GasUsed,
+										 *m.TxReceipt.ContractAddr)
 					var res *ServerComMessage
 					res = createConRes(msg.id, msg.timestamp, msg.topic, "deploy",
-														 msg.txReceipt.txHash, 0, 0, 0,
-														 msg.txReceipt.gasUsed, msg.txReceipt.contractAddr, true, "", "")
+														 m.TxReceipt.TxHash, 0, 0, 0,
+														 m.TxReceipt.GasUsed, *m.TxReceipt.ContractAddr, true, "", "")
 					s.queueOut(res)
 				}
 			}

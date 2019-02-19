@@ -181,7 +181,7 @@ type MsgClientCon struct {
   // version -- current unused
   Version string `json:"version,omitempty"`
   // chainID
-  ChainID int `json:"chainid,omitempty"`
+  ChainID int32 `json:"chainid,omitempty"`
   // the address of the contract, ignored if what == deploy
   Addr string `json:"addr,omitempty"`
   // Function name: ignored if what == deploy as it's always referred to ctor

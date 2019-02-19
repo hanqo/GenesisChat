@@ -400,7 +400,7 @@ func pbCliDeserialize(pkt *pbx.ClientMsg) *ClientComMessage {
         Topic: con.GetTopic(),
         From: con.GetFrom(),
         Version: con.GetVersion(),
-        ChainID: int(con.GetChainID()),
+        ChainID: con.GetChainID(),
         Addr: con.GetAddr(),
         Fn: con.GetFn(),
         Inputs: con.GetInputs(),
