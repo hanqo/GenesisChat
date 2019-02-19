@@ -14,92 +14,92 @@ import (
 	"time"
 )
 
-//TODO(xrisheng):move config to config file.
+//TODO(xrisheng):move config To config file.
+//TODO(xrisheng):eth event handler
 //var ethRPCAddr = "https://rinkeby.infura.io"
 var ethRPCAddr = "http://127.0.0.1:7545"
 
 type ETHHandler struct {
+	ToChains   chan *MsgToChain
+	FromChains chan *MsgFromChain
+	RunDone    chan bool
+	PollDone   chan bool
 
-	toChains      chan *MsgToChain
-	fromChains    chan *MsgFromChain
-	runDone       chan bool
-	pollDone      chan bool
+	abi *ABIHandler
 
-	abi           *ABIHandler
-
-	ticker       *time.Ticker
-	add		     chan TxPending
-	pendings     []TxPending
+	ticker   *time.Ticker
+	add      chan TxPending
+	pendings []TxPending
 }
 
 func NewETHHandler() *ETHHandler {
 
 	h := &ETHHandler{
-		toChains:		make(chan *MsgToChain,1),
-		fromChains:		make(chan *MsgFromChain,1),
-		runDone:		make(chan bool, 1),
-		pollDone:		make(chan bool, 1),
+		ToChains:   make(chan *MsgToChain, 1),
+		FromChains: make(chan *MsgFromChain, 1),
+		RunDone:    make(chan bool, 1),
+		PollDone:   make(chan bool, 1),
 
-		abi:            NewABIHandler(),
+		abi: NewABIHandler(),
 
-		ticker:			time.NewTicker(time.Second * 1),
-		add:    		make(chan TxPending,1),
+		ticker: time.NewTicker(time.Second * 1),
+		add:    make(chan TxPending, 1),
 	}
 	go h.run()
 	go h.poll()
 	return h
 }
 
-func (h *ETHHandler) poll(){
+func (h *ETHHandler) poll() {
 	c, err := ethclient.Dial(ethRPCAddr)
 
-	if err != nil{
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	for{
+	for {
 		select {
 		case <-h.ticker.C:
-			for i:= len(h.pendings)-1; i>=0; i--{
+			for i := len(h.pendings) - 1; i >= 0; i-- {
 
-				hash := common.HexToHash(h.pendings[i].txHash)
-				ret,_:= c.TransactionReceipt(context.Background(),hash)
+				hash := common.HexToHash(h.pendings[i].TxHash)
+				ret, _ := c.TransactionReceipt(context.Background(), hash)
 
 				if ret != nil {
-					m:= &MsgFromChain{
-						to:      h.pendings[i].from,
-						user:    h.pendings[i].user,
-						version: h.pendings[i].version,
-						chainID: h.pendings[i].chainID,
-						typ:     "tx_receipt",
+					m := &MsgFromChain{
+						To:      h.pendings[i].From,
+						User:    h.pendings[i].User,
+						Version: h.pendings[i].Version,
+						ChainID: h.pendings[i].ChainID,
+						Typ:     "tx_receipt",
 
-						txReceipt: &MsgTxReceipt{
-							confirmed: 		true,
-							txHash:    		h.pendings[i].txHash,
-							gasUsed:   		ret.GasUsed,
+						TxReceipt: &MsgTxReceipt{
+							Confirmed: true,
+							TxHash:    h.pendings[i].TxHash,
+							GasUsed:   ret.GasUsed,
 						},}
-					s:= ret.ContractAddress.String()
-					if len(s) > 0{
-						m.txReceipt.contractAddr = &s
+					s := ret.ContractAddress.String()
+					if len(s) > 0 {
+						m.TxReceipt.ContractAddr = &s
 					}
-					h.fromChains <- m
+					h.FromChains <- m
 					h.pendings = append(h.pendings[:i], h.pendings[i+1:]...)
 				}
 			}
-		case s:= <-h.add:
-			h.pendings = append(h.pendings,s)
-		case <-h.pollDone:
+		case s := <-h.add:
+			h.pendings = append(h.pendings, s)
+		case <-h.PollDone:
 			log.Printf("Stop ETH handler polling")
 			return
 		}
 	}
 }
 
-func (h *ETHHandler) run(){
-	for{
+func (h *ETHHandler) run() {
+	for {
 		select {
-		case msg := <- h.toChains:
-			switch msg.typ {
+		case msg := <-h.ToChains:
+			switch msg.Typ {
 			case "signed_tx":
 				go h.sendSignedTx(msg)
 			case "request_tx":
@@ -107,220 +107,218 @@ func (h *ETHHandler) run(){
 			case "contract_call":
 				go h.callContract(msg)
 			default:
-				log.Printf("Unrecognized message in run loop")
+				log.Printf("Unrecognized message in eth run loop")
 			}
-		case <-h.runDone:
+		case <-h.RunDone:
 			log.Printf("Stop ETH hanlder running")
 			return
 		}
 	}
 }
 
-func (h *ETHHandler) sendSignedTx(r *MsgToChain){
+func (h *ETHHandler) sendSignedTx(r *MsgToChain) {
 
-	if r.signedTx ==nil{
+	if r.SignedTx == nil {
 		log.Fatal("signed is empty")
 	}
 
 	c, err := ethclient.Dial(ethRPCAddr)
-	if err != nil{
+	if err != nil {
 		log.Fatal(err)
 	}
 
 	defer c.Close()
 
-	rawTxBytes, err := hex.DecodeString(*r.signedTx)
-	if err != nil{
+	rawTxBytes, err := hex.DecodeString(*r.SignedTx)
+	if err != nil {
 		log.Fatal(err)
 	}
 
 	tx := new(types.Transaction)
 	_ = rlp.DecodeBytes(rawTxBytes, &tx)
 
-	from := common.HexToAddress(r.from)
+	from := common.HexToAddress(r.From)
 	balance, err := c.BalanceAt(context.Background(),
 		from,
 		nil)
-	if err != nil{
+	if err != nil {
 		log.Fatal(err)
 	}
 
-
 	if balance.Cmp(tx.Value()) < 1 {
-		str:= fmt.Sprintf("Not enough balance in %v", r.from)
+		str := fmt.Sprintf("Not enough balance in %v", r.From)
 		log.Fatal(str)
 	}
 
-	msg:= ethereum.CallMsg{
-		From:from,
-		To:tx.To(),
-		Gas:tx.Gas(),
-		GasPrice:tx.GasPrice(),
-		Data:tx.Data(),
-		Value:tx.Value(),
+	msg := ethereum.CallMsg{
+		From:     from,
+		To:       tx.To(),
+		Gas:      tx.Gas(),
+		GasPrice: tx.GasPrice(),
+		Data:     tx.Data(),
+		Value:    tx.Value(),
 	}
-	est,err := c.EstimateGas(context.Background(),msg)
+	est, err := c.EstimateGas(context.Background(), msg)
 	//estimate := uint64(21000)
 
-	err = c.SendTransaction(context.Background(),tx)
-	if err != nil{
+	err = c.SendTransaction(context.Background(), tx)
+	if err != nil {
 		log.Fatal(err)
 	}
 
 	h.add <- TxPending{
-		from:      	r.from,
-		user:    	r.user,
-		version: 	r.version,
-		chainID: 	r.chainID,
-		txHash:		tx.Hash().String(),
+		From:    r.From,
+		User:    r.User,
+		Version: r.Version,
+		ChainID: r.ChainID,
+		TxHash:  tx.Hash().String(),
 	}
 
-	h.fromChains <- &MsgFromChain{
-		to:      r.from,
-		user:    r.user,
-		version: r.version,
-		chainID: r.chainID,
-		typ:     "tx_sent",
-		txSent: &MsgTxSent{
-			txHash:          tx.Hash().String(),
-			gasPrice:        tx.GasPrice().Int64(),
-			nonce:           tx.Nonce(),
-			gasEstimated:    est,
+	h.FromChains <- &MsgFromChain{
+		To:      r.From,
+		User:    r.User,
+		Version: r.Version,
+		ChainID: r.ChainID,
+		Typ:     "tx_sent",
+		TxSent: &MsgTxSent{
+			TxHash:       tx.Hash().String(),
+			GasPrice:     tx.GasPrice().Int64(),
+			Nonce:        tx.Nonce(),
+			gasEstimated: est,
 		},}
 }
 
-func (h *ETHHandler) generateTxInfo(r *MsgToChain){
-	if r.requestTx ==nil{
-		log.Fatal("request is empty")}
+func (h *ETHHandler) generateTxInfo(r *MsgToChain) {
+	if r.RequestTx == nil {
+		log.Fatal("request is empty")
+	}
 
 	c, err := ethclient.Dial(ethRPCAddr)
-	if err != nil{
+	if err != nil {
 		log.Fatal(err)
 	}
 	defer c.Close()
 
-
-	from := common.HexToAddress(r.from)
+	from := common.HexToAddress(r.From)
 
 	nonce, _ := c.PendingNonceAt(context.Background(), from)
 	price, _ := c.SuggestGasPrice(context.Background())
 
 	var txData []byte = nil
 
-	if r.requestTx != nil{
-		txData = h.abi.packContractFunc(r.requestTx.function, r.requestTx.inputs)
+	if r.RequestTx != nil {
+		txData = h.abi.packContractFunc(r.RequestTx.Function, r.RequestTx.Inputs)
 	}
 
-	h.fromChains <- &MsgFromChain{
-		to:      r.from,
-		user:    r.user,
-		version: r.version,
-		chainID: r.chainID,
-		typ:     "tx_info",
+	h.FromChains <- &MsgFromChain{
+		To:      r.From,
+		User:    r.User,
+		Version: r.Version,
+		ChainID: r.ChainID,
+		Typ:     "tx_info",
 
-		txInfo: &MsgTxInfo{
-			function:  r.requestTx.function,
-			gasPrice:  price.Int64(),
-			nonce:     uint64(nonce),
-			data:      txData,
-			gasLimit:  uint64(1000000),
+		TxInfo: &MsgTxInfo{
+			Function: r.RequestTx.Function,
+			GasPrice: price.Int64(),
+			Nonce:    uint64(nonce),
+			Data:     txData,
+			GasLimit: uint64(1000000),
 		},}
 }
 
 func (h *ETHHandler) callContract(r *MsgToChain) {
-	if r.call == nil {
-		log.Fatal("call is empty")
+	if r.Call == nil {
+		log.Fatal("Call is empty")
+	}
+
+	c, err := ethclient.Dial(ethRPCAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer c.Close()
+
+	price, _ := c.SuggestGasPrice(context.Background())
+	data := h.abi.packContractFunc(r.Call.ContractFunc.Function, r.Call.ContractFunc.Inputs)
+	to := common.HexToAddress(r.Call.ContractAddr)
+
+	msg := ethereum.CallMsg{
+		From:     common.HexToAddress(r.From),
+		To:       &to,
+		Gas:      uint64(1000000),
+		GasPrice: price,
+		Data:     data,
+	}
+
+	if r.Call.Value != nil {
+		msg.Value = big.NewInt(*r.Call.Value)
+	}
+
+	returnByte, err := c.CallContract(context.Background(), msg, nil)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	retStr, err := h.abi.unpackContractFunc(returnByte, r.Call.ContractFunc.Function)
+
+	h.FromChains <- &MsgFromChain{
+		To:      r.From,
+		User:    r.User,
+		Version: r.Version,
+		ChainID: r.ChainID,
+		Typ:     "call_return",
+
+		CallReturn: &MsgCallReturn{
+			Function:     r.Call.ContractFunc.Function,
+			ContractAddr: r.Call.ContractAddr,
+			Output:       retStr,},
+	}
+}
+
+/*func (h *ETHHandler) requestReceipt(r *MsgToChain){
+	if r.TxHash ==nil{
+		log.Fatal("tx hash is empty")
 	}
 
 	c, err := ethclient.Dial(ethRPCAddr)
 	if err != nil{
 		log.Fatal(err)
 	}
-	defer c.Close()
 
-	price, _ := c.SuggestGasPrice(context.Background())
-	data:= h.abi.packContractFunc(r.call.contractFunc.function, r.call.contractFunc.inputs)
-	to:= common.HexToAddress(r.call.contractAddr)
-
-	msg:= ethereum.CallMsg{
-		From:common.HexToAddress(r.from),
-		To: &to,
-		Gas:uint64(1000000),
-		GasPrice:price,
-		Data:data,
-	}
-
-	if r.call.value != nil{
-		msg.Value = big.NewInt(*r.call.value)
-	}
-
-	returnByte, err:= c.CallContract(context.Background(),msg,nil)
-
+	toByte := []byte(*r.TxHash)
+	hash := common.BytesToHash(toByte)
+	ret,err:= c.TransactionReceipt(context.Background(),hash)
 	if err != nil{
 		log.Fatal(err)
 	}
-	retStr,err := h.abi.unpackContractFunc(returnByte,r.call.contractFunc.function)
-
-	h.fromChains <- &MsgFromChain{
-		to:      r.from,
-		user:    r.user,
-		version: r.version,
-		chainID: r.chainID,
-		typ:     "call_return",
-
-		callReturn: &MsgCallReturn{
-			function: r.call.contractFunc.function,
-			contractAddr:r.call.contractAddr,
-			output:   retStr,},
-	}
-	c.Close()
-}
-
-	/*func (h *ETHHandler) requestReceipt(r *MsgToChain){
-		if r.txHash ==nil{
-			log.Fatal("tx hash is empty")
-		}
-
-		c, err := ethclient.Dial(ethRPCAddr)
-		if err != nil{
-			log.Fatal(err)
-		}
-
-		toByte := []byte(*r.txHash)
-		hash := common.BytesToHash(toByte)
-		ret,err:= c.TransactionReceipt(context.Background(),hash)
-		if err != nil{
-			log.Fatal(err)
-		}
-		if ret == nil{
-			h.fromChains <- &MsgFromChain{
-				to:      r.from,
-				user:    r.user,
-				version: r.version,
-				chainID: r.chainID,
-				typ:	 "tx_receipt",
-
-				receipt:&MsgTxReceipt{
-					confirmed:	false,
-				},
-
-			}
-			return
-		}
-
-		h.fromChains <- &MsgFromChain{
-			to:      r.from,
-			user:    r.user,
-			version: r.version,
-			chainID: r.chainID,
-			typ:	 "tx_receipt",
+	if ret == nil{
+		h.FromChains <- &MsgFromChain{
+			To:      r.From,
+			User:    r.User,
+			Version: r.Version,
+			ChainID: r.ChainID,
+			Typ:	 "tx_receipt",
 
 			receipt:&MsgTxReceipt{
-				confirmed:	true,
-				txHash:		string(toByte),
-				gasUsed: 	ret.GasUsed,
+				Confirmed:	false,
 			},
 
 		}
 		return
-	}*/
+	}
+
+	h.FromChains <- &MsgFromChain{
+		To:      r.From,
+		User:    r.User,
+		Version: r.Version,
+		ChainID: r.ChainID,
+		Typ:	 "tx_receipt",
+
+		receipt:&MsgTxReceipt{
+			Confirmed:	true,
+			TxHash:		string(toByte),
+			GasUsed: 	ret.GasUsed,
+		},
+
+	}
+	return
+}*/

@@ -1,76 +1,76 @@
 package blockchain
 
-// messages and the wrapper send to block chain.
+// messages and the wrapper send To block chain.
 type MsgToChain struct {
-	from 		string
-	user  		string
-	version 	string
-	chainID 	int32
-	typ			string
+	From    string
+	User    string
+	Version string
+	ChainID int32
+	Typ     string
 
-	signedTx 	    *string
-    requestTx		*MsgContractFunc
-	call            *MsgCall
+	SignedTx  *string
+	RequestTx *MsgContractFunc
+	Call      *MsgCall
 }
 
 type MsgCall struct {
-	contractAddr 	string
-	contractFunc 	MsgContractFunc
-	value           *int64
+	ContractAddr string
+	ContractFunc MsgContractFunc
+	Value        *int64
 }
 
-type MsgContractFunc struct{
-	function 	 	 string
-	inputs 		    []string
+type MsgContractFunc struct {
+	Function string
+	Inputs   []string
 }
 
-// messages and the wrapper send from block chain
-type MsgFromChain struct{
-	to 			string
-	user  	    string
-	version 	string
-	chainID 	int32
-	typ         string
+// messages and the wrapper send From block chain
+type MsgFromChain struct {
+	To      string
+	User    string
+	Version string
+	ChainID int32
+	Typ     string
 
-	txReceipt   	*MsgTxReceipt
-	txSent      	*MsgTxSent
-	callReturn      *MsgCallReturn
-	txInfo    		*MsgTxInfo
+	TxReceipt  *MsgTxReceipt
+	TxSent     *MsgTxSent
+	CallReturn *MsgCallReturn
+	TxInfo     *MsgTxInfo
 }
 
-type MsgTxReceipt struct{
-	confirmed   	bool
-	txHash 			string
-	gasUsed     	uint64
-	contractAddr 	*string
+type MsgTxReceipt struct {
+	Confirmed    bool
+	TxHash       string
+	GasUsed      uint64
+	ContractAddr *string
 }
 
-type MsgTxSent struct{
-	txHash 		 string
-	gasPrice     int64
-	nonce        uint64
+type MsgTxSent struct {
+	TxHash       string
+	GasPrice     int64
+	Nonce        uint64
 	gasEstimated uint64
 }
 
 type MsgCallReturn struct {
-	contractAddr    string
-	function        string
-	output          string
+	ContractAddr string
+	Function     string
+	Output       string
 }
 
-type MsgTxInfo	struct{
-	function   			string
-	gasPrice 			int64
-	gasLimit    		uint64
-	nonce  	 			uint64
-	data     			[]byte
+type MsgTxInfo struct {
+	Function string
+	GasPrice int64
+	GasLimit uint64
+	Nonce    uint64
+	Data     []byte
 }
 
-type TxPending struct{
-	from 		string
-	user  		string
-	version 	string
-	chainID 	int32
+type TxPending struct {
+	From    string
+	User    string
+	Version string
+	ChainID int32
 
-	txHash      string
+	TxHash string
 }
