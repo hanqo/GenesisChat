@@ -24,6 +24,13 @@ import (
 	"github.com/tinode/chat/server/store"
 	"github.com/tinode/chat/server/store/types"
 
+	"encoding/hex"
+	"fmt"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	"math/big"
+
+
 	bc "github.com/tinode/chat/server/blockchain"
 )
 
@@ -1181,6 +1188,58 @@ func (s *Session) note(msg *ClientComMessage) {
 	}
 }
 
+// kai: helper function to create a ServerComMessage msg, return nil if some error happens
+func createConRes(id string, timestamp time.Time, topic, what, txhash string,
+									gasprice int64, nonce, gasestimated, gasused uint64,
+									conaddr string, confirmed bool, fn, output string) (msg *ServerComMessage) {
+	switch what {
+	case "deploy":
+		if confirmed && conaddr == "" {
+			log.Println("contract address is empty, deploy failed")
+			return nil
+		}
+
+	}
+	var r *ServerComMessage
+	r.id = id
+	r.timestamp = timestamp
+	r.ConRes = &MsgServerConRes {
+		Topic: topic,
+		What: what,
+		TxHash: txhash,
+		GasPrice: gasprice,
+		Nonce: nonce,
+		GasEstimated: gasestimated,
+		GasUsed: gasused,
+		ConAddr: conaddr,
+		Confirmed: confirmed,
+		Fn: fn,
+		Output: output,
+	}
+	return r
+}
+
+// kai: helper function to generate raw tx for contract deployment
+//			see generateRawTxDeployContract in eth_handler_test.go
+func createTxForDeploy(gas uint64, gasPrice int64, nonce uint64, data []byte) string {
+	// todo use test network
+	p := "4b62386099abd28f2b63d3a08918cbffc72f4752e3a029747f2a4681b28021c7"
+	chainID := big.NewInt(5777) // ganache
+
+	privateKey, _ := crypto.HexToECDSA(p)
+	amount := big.NewInt(0) // 1 ether
+
+	tx := ethtypes.NewContractCreation(nonce, amount, gas, big.NewInt(gasPrice), data)
+	signedTx, _ := ethtypes.SignTx(tx, ethtypes.NewEIP155Signer(chainID), privateKey)
+
+	ts := ethtypes.Transactions{signedTx}
+	rawTxBytes := ts.GetRlp(0)
+	rawTxHex := hex.EncodeToString(rawTxBytes)
+
+	fmt.Printf("rawTxHex = %s\n",rawTxHex)
+	return rawTxHex
+}
+
 // kai: the con message from client
 func (s *Session) con(msg *ClientComMessage) {
 	
@@ -1190,13 +1249,12 @@ func (s *Session) con(msg *ClientComMessage) {
 	}
 
 	// check if eth handler is working
-	if globals.bcHandlers[msg.topic] == nil {
+	h := globals.bcHandlers[msg.topic]
+	if h == nil {
 		log.Println("we get a con msg but eth handler is not running")
 		// todo maybe re-create handlers here
 		return
 	}
-
-	h := globals.bcHandlers[msg.topic]
 
 	switch msg.Con.What {
 	case "deploy":
@@ -1217,8 +1275,39 @@ func (s *Session) con(msg *ClientComMessage) {
 			for {
 				msg := <-h.fromChains
 
-				if msg.txSent != nil {
+				if msg.txInfo != nil {
+					// we get the tx info needed to construct a tx
+					if msg.txInfo.gasPrice <= 0 ||
+						 msg.txInfo.nonce <= 0 ||
+						 msg.txInfo.data == nil {
+						log.Println("unabled to construct tx")
+						s.queueOut(ErrContractDeployFailed(msg.id, msg.topic, msg.timestamp))
+						return
+					}
+
+					tx := createTxForDeploy(5000000, msg.txInfo.gasPrice, msg.txInfo.nonce, msg.txInfo.data)
+					h.toChains <- &MsgToChain {
+						from: msg.Con.From,
+						user: msg.Con.User,
+						verson: msg.Con.Version,
+						chainID: msg.Con.ChainID,
+						typ: "signed_tx",
+						signedTx:  &tx,
+					}
+				} else if msg.txSent != nil {
+					// tx was sent (but not confirmed yet)
+					log.Printf("deploy contract tx sent, hash = %s, gasPrice = %d, nonce = %d, gasEstimated = %d",
+										 msg.txSent.txHash,
+										 msg.txSent.gasPrice,
+										 msg.txSent.nonce,
+										 msg.txSent.gasEstimated)
+					var res *ServerComMessage
+					res = createConRes(msg.id, msg.timestamp, msg.topic, "deploy",
+														 msg.txSent.txHash, msg.txSent.gasPrice, msg.txSent.nonce,
+														 msg.txSent.gasEstimated, 0, "", false, "", "")
+					s.queueOut(res)
 				} else if msg.txReceipt != nil {
+					// we get the tx receipt
 					if msg.txReceipt.contractAddr == nil {
 						log.Println("deploy failed: contract address is nil")
 						s.queueOut(ErrContractDeployFailed(msg.id, msg.topic, msg.timestamp))
@@ -1229,21 +1318,15 @@ func (s *Session) con(msg *ClientComMessage) {
 										 msg.txReceipt.gasUsed,
 										 *msg.txReceipt.contractAddr)
 					var res *ServerComMessage
-					res.ConRes = &MsgServerConRes {
-						Topic: msg.topic,
-						What: "deploy",
-						Tx: msg.txReceipt.txHash,
-						GasUsed: msg.txReceipt.gasUsed,
-						ConAddr: *msg.txReceipt.contractAddr,
-						Confirmed: true,
-					}
-					res.id = msg.id
-					res.timestamp = msg.timestamp
+					res = createConRes(msg.id, msg.timestamp, msg.topic, "deploy",
+														 msg.txReceipt.txHash, 0, 0, 0,
+														 msg.txReceipt.gasUsed, msg.txReceipt.contractAddr, true, "", "")
 					s.queueOut(res)
 				}
 			}
 		}(h, s, msg)
-	case 
+	case "get":
+	case "set":
 	}
 }
 
