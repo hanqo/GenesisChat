@@ -79,7 +79,7 @@ func generateRawTxDeployContract(gas uint64, gasPrice int64, nonce uint64, data 
 }
 
 func generateRawTxSetContract(gas uint64, gasPrice int64, nonce uint64, data []byte) string{
-	contractAddr := "0x02c45a237fc732fd1b6445161efecb1ec77addf6"
+	contractAddr := "0xD083B809Ee1531aA40bb94cbb1F134913aC9d5eE"
 	recipientAddr := common.HexToAddress(contractAddr)
 
 	privateStr := "4b62386099abd28f2b63d3a08918cbffc72f4752e3a029747f2a4681b28021c7"
@@ -210,7 +210,7 @@ func TestSetContract(t *testing.T) {
 			if msg.TxSent != nil {
 				fmt.Printf("set tx Sent with hash: %s\n", msg.TxSent.TxHash)
 				fmt.Printf("set tx Sent with gas price: %d\n", msg.TxSent.GasPrice)
-				fmt.Printf("set tx Sent with Nonce: %d\n", msg.TxSent.Nonce)
+				fmt.Printf("set tx Sent with nonce: %d\n", msg.TxSent.Nonce)
 				fmt.Printf("set tx Sent with estimated gas: %d\n", msg.TxSent.gasEstimated)
 			} else if msg.TxInfo != nil {
 				rawTxData3 := generateRawTxSetContract(500000, msg.TxInfo.GasPrice, msg.TxInfo.Nonce, msg.TxInfo.Data)
@@ -242,7 +242,7 @@ func TestCallContract(t *testing.T) {
 		ChainID: 123,
 		Typ:     "contract_call",
 		Call: &MsgCall{
-			ContractAddr: "0x02c45a237fc732fd1b6445161efecb1ec77addf6",
+			ContractAddr: "0xD083B809Ee1531aA40bb94cbb1F134913aC9d5eE",
 			ContractFunc: MsgContractFunc{
 				Function: "getEntryCost",},
 		},}
