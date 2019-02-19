@@ -935,12 +935,22 @@ func ErrVersionNotSupported(id, topic string, ts time.Time) *ServerComMessage {
 		Timestamp: ts}}
 }
 
-// ErrContractDeployFailed indicates the smart contract deployment is failed (503)
+// ErrContractDeployFailed indicates the smart contract deployment is failed
 func ErrContractDeployFailed(id, topic string, ts time.Time) *ServerComMessage {
 	return &ServerComMessage{Ctrl: &MsgServerCtrl{
 		Id:        id,
-		Code:      http.StatusServiceUnavailable, // 503
+		Code:      -101,
 		Text:      "contract deploy failed",
+		Topic:     topic,
+		Timestamp: ts}}
+}
+
+// ErrContractSetFailed indicates the smart contract setter is failed (503)
+func ErrContractSetFailed(id, topic string, ts time.Time) *ServerComMessage {
+	return &ServerComMessage{Ctrl: &MsgServerCtrl{
+		Id:        id,
+		Code:      -103,
+		Text:      "contract set failed",
 		Topic:     topic,
 		Timestamp: ts}}
 }

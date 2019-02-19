@@ -1189,17 +1189,10 @@ func (s *Session) note(msg *ClientComMessage) {
 }
 
 // kai: helper function to create a ServerComMessage msg, return nil if some error happens
+// todo: value unused?
 func createConRes(id string, timestamp time.Time, topic, what, txhash string,
 									gasprice int64, nonce, gasestimated, gasused uint64,
 									conaddr string, confirmed bool, fn, output string) (msg *ServerComMessage) {
-	switch what {
-	case "deploy":
-		if confirmed && conaddr == "" {
-			log.Println("contract address is empty, deploy failed")
-			return nil
-		}
-
-	}
 	var r *ServerComMessage
 	r.id = id
 	r.timestamp = timestamp
@@ -1248,6 +1241,18 @@ func (s *Session) con(msg *ClientComMessage) {
 		return
 	}
 
+	// check if topic is loaded
+	t := globals.hub.topicGet(msg.topic)
+	if t == nil {
+		log.Println("the target topic is not loaded")
+		return
+	}
+
+	// check if it's group topic
+	if t.cat != types.TopicCatGrp {
+		log.Println("con msg can only target at group topic")
+	}
+
 	// check if eth handler is working
 	h := globals.bcHandlers[msg.topic]
 	if h == nil {
@@ -1257,7 +1262,16 @@ func (s *Session) con(msg *ClientComMessage) {
 	}
 
 	switch msg.Con.What {
+
 	case "deploy":
+		// check the "From" field (public addr) and store it
+		if t.addr != "" && t.addr != msg.Con.From {
+			log.Printf("different public address detected, requested = %s, stored = %s", msg.Con.From, t.addr)
+		}
+		// todo do we need sync here?
+		// todo store it in database
+		t.addr = msg.Con.From
+
 		h.ToChains <- &bc.MsgToChain {
 			From: msg.Con.From,
 			User: msg.Con.User,
@@ -1270,8 +1284,8 @@ func (s *Session) con(msg *ClientComMessage) {
 			},
 		}
 
-		// use goroutine to do async handling
-		go func(h *bc.ETHHandler, s *Session, msg *ClientComMessage) {
+		// async handling
+		go func(h *bc.ETHHandler, s *Session, msg *ClientComMessage, t *Topic) {
 			for {
 				m := <-h.FromChains
 
@@ -1285,6 +1299,7 @@ func (s *Session) con(msg *ClientComMessage) {
 						return
 					}
 
+					// todo: no magic numbers
 					tx := createTxForDeploy(5000000, m.TxInfo.GasPrice, m.TxInfo.Nonce, m.TxInfo.Data)
 					h.ToChains <- &bc.MsgToChain {
 						From: msg.Con.From,
@@ -1313,6 +1328,10 @@ func (s *Session) con(msg *ClientComMessage) {
 						s.queueOut(ErrContractDeployFailed(msg.id, msg.topic, msg.timestamp))
 						return
 					}
+
+					// store contract addr, todo see above
+					t.conAddr = *m.TxReceipt.ContractAddr
+
 					log.Printf("deploy contract ok, hash = %s, gas = %d, contract address = %s",
 										 m.TxReceipt.TxHash,
 										 m.TxReceipt.GasUsed,
@@ -1324,9 +1343,123 @@ func (s *Session) con(msg *ClientComMessage) {
 					s.queueOut(res)
 				}
 			}
-		}(h, s, msg)
+		}(h, s, msg, t)
+
 	case "get":
+
+		if msg.Con.Addr != "" && msg.Con.Addr != t.conAddr {
+			log.Printf("different contract address detected, requested = %s, stored = %s", msg.Con.Addr, t.conAddr)
+			t.conAddr = msg.Con.Addr
+		}
+		h.ToChains <- &bc.MsgToChain {
+			From: msg.Con.From,
+			User: msg.Con.User,
+			Version: msg.Con.Version,
+			ChainID: msg.Con.ChainID,
+			Typ: "contract_call",
+			Call: &bc.MsgCall {
+				ContractAddr: msg.Con.Addr,
+				ContractFunc: bc.MsgContractFunc {
+					Function: msg.Con.Fn,
+				},
+			},
+		}
+
+		go func(h *bc.ETHHandler, s *Session, msg *ClientComMessage) {
+			for {
+				m := <-h.FromChains
+				if m.CallReturn != nil {
+					log.Printf("getter returns, fn = %s, output = %s", m.CallReturn.Function, m.CallReturn.Output)
+					var res *ServerComMessage
+					res = createConRes(msg.id, msg.timestamp, msg.topic, "get",
+														 "", 0, 0, 0, 0,
+														 msg.Con.Addr, true, m.CallReturn.Function, m.CallReturn.Output)
+					s.queueOut(res)
+				}
+			}
+		}(h, s, msg)
+
 	case "set":
+
+		// todo: use one func for sanity check
+		if msg.Con.Addr != "" && msg.Con.Addr != t.conAddr {
+			log.Printf("different contract address detected, requested = %s, stored = %s", msg.Con.Addr, t.conAddr)
+			t.conAddr = msg.Con.Addr
+		}
+
+		h.ToChains <- &bc.MsgToChain {
+			From: msg.Con.From,
+			User: msg.Con.User,
+			Version: msg.Con.Version,
+			ChainID: msg.Con.ChainID,
+			Typ: "request_tx",
+			RequestTx: &bc.MsgContractFunc {
+				Function: msg.Con.Fn,
+				Inputs: msg.Con.Inputs,
+			},
+		}
+
+		// async handling
+		// todo use a common function
+		go func(h *bc.ETHHandler, s *Session, msg *ClientComMessage, t *Topic) {
+			for {
+				m := <-h.FromChains
+
+				if m.TxInfo != nil {
+					// we get the tx info needed to construct a tx
+					if m.TxInfo.GasPrice <= 0 ||
+						 m.TxInfo.Nonce <= 0 ||
+						 m.TxInfo.Data == nil {
+						log.Println("unabled to construct tx")
+						s.queueOut(ErrContractSetFailed(msg.id, msg.topic, msg.timestamp))
+						return
+					}
+
+					// todo: no magic numbers
+					tx := createTxForDeploy(5000000, m.TxInfo.GasPrice, m.TxInfo.Nonce, m.TxInfo.Data)
+					h.ToChains <- &bc.MsgToChain {
+						From: msg.Con.From,
+						User: msg.Con.User,
+						Version: msg.Con.Version,
+						ChainID: msg.Con.ChainID,
+						Typ: "signed_tx",
+						SignedTx:  &tx,
+					}
+				} else if m.TxSent != nil {
+					// tx was sent (but not confirmed yet)
+					log.Printf("set contract tx sent, hash = %s, gasPrice = %d, nonce = %d, gasEstimated = %d",
+										 m.TxSent.TxHash,
+										 m.TxSent.GasPrice,
+										 m.TxSent.Nonce,
+										 m.TxSent.GasEstimated)
+					var res *ServerComMessage
+					res = createConRes(msg.id, msg.timestamp, msg.topic, "set",
+														 m.TxSent.TxHash, m.TxSent.GasPrice, m.TxSent.Nonce,
+														 m.TxSent.GasEstimated, 0, "", false, "", "")
+					s.queueOut(res)
+				} else if m.TxReceipt != nil {
+					// we get the tx receipt
+					if m.TxReceipt.ContractAddr == nil {
+						log.Println("deploy failed: contract address is nil")
+						s.queueOut(ErrContractSetFailed(msg.id, msg.topic, msg.timestamp))
+						return
+					}
+
+					// store contract addr, todo see above
+					t.conAddr = *m.TxReceipt.ContractAddr
+
+					log.Printf("deploy contract ok, hash = %s, gas = %d, contract address = %s",
+										 m.TxReceipt.TxHash,
+										 m.TxReceipt.GasUsed,
+										 *m.TxReceipt.ContractAddr)
+					var res *ServerComMessage
+					res = createConRes(msg.id, msg.timestamp, msg.topic, "set",
+														 m.TxReceipt.TxHash, 0, 0, 0,
+														 m.TxReceipt.GasUsed, *m.TxReceipt.ContractAddr, true, "", "")
+					s.queueOut(res)
+				}
+			}
+		}(h, s, msg, t)
 	}
 }
 
