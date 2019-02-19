@@ -1,21 +1,18 @@
 package vote
 
 import (
-	"sync"
 	"time"
 )
 
 type VoteEvent struct {
-	owner		string
-	topic       string
+	Owner string
+	Topic string
 
-	proposal MsgVoteProposal
-	param    MsgVoteGetParam
-	status   MsgVoteStatus
+	Proposal *MsgVoteProposal
+	Param    *MsgVoteGetParam
+	Status   *MsgVoteStatus
 
 	ticker 		*time.Ticker
-	mutex 		sync.Mutex
-
 }
 
 func NewVoteEvent(owner string,
@@ -33,22 +30,22 @@ func NewVoteEvent(owner string,
 	expiresStr := expiresTime.Format(time.RFC850)
 
 	e := &VoteEvent{
-		owner:		owner,
-		topic:		topic,
-		proposal: 	*proposal,
-		ticker: 	time.NewTicker(durationTime),
+		Owner:    owner,
+		Topic:    topic,
+		Proposal: proposal,
+		ticker:   time.NewTicker(durationTime),
 
-		param: MsgVoteGetParam{
-			duration:duration,
-			passRate:passRate,
+		Param: &MsgVoteGetParam{
+			Duration: duration,
+			PassRate: passRate,
 
-			voterSize:uint(len(voterList)),
+			VoterSize: uint(len(voterList)),
 		},
 
-		status:MsgVoteStatus{
-			curVoterList: voterList,
-			start:startStr,
-			expires:expiresStr,
+		Status:&MsgVoteStatus{
+			CurVoterList: voterList,
+			Start:        startStr,
+			Expires:      expiresStr,
 		},
 	}
 	go e.exec()
@@ -57,27 +54,25 @@ func NewVoteEvent(owner string,
 
 func (e *VoteEvent) Vote (voter string, ballot uint) bool{
 
-	  expires, _ := time.Parse(time.RFC850, e.status.expires)
+	  expires, _ := time.Parse(time.RFC850, e.Status.Expires)
 	  now := time.Now().UTC()
 
 	  if  now.After(expires) {
 	  	return false
 	  }
 
-	for	i := len(e.status.curVoterList)-1; i>=0; i--{
-		v:= e.status.curVoterList[i]
+	for	i := len(e.Status.CurVoterList)-1; i>=0; i--{
+		v:= e.Status.CurVoterList[i]
 		if v == voter {
-			e.mutex.Lock()
 			switch ballot {
 			case 0:
-				e.status.againstList = append(e.status.againstList, voter)
+				e.Status.AgainstList = append(e.Status.AgainstList, voter)
 			case 1:
-				e.status.forList = append(e.status.forList, voter)
+				e.Status.ForList = append(e.Status.ForList, voter)
 			default:
-				e.status.abstainedList = append(e.status.abstainedList, voter)
+				e.Status.AbstainedList = append(e.Status.AbstainedList, voter)
 			}
-			e.mutex.Unlock()
-			e.status.curVoterList = append(e.status.curVoterList[:i], e.status.curVoterList[i+1:]...)
+			e.Status.CurVoterList = append(e.Status.CurVoterList[:i], e.Status.CurVoterList[i+1:]...)
 			return true
 		}
 	}
@@ -85,28 +80,26 @@ func (e *VoteEvent) Vote (voter string, ballot uint) bool{
 }
 
 func (e *VoteEvent) GetStatus() *MsgVoteStatus {
-	return &e.status
+	return e.Status
 }
 
 func (e *VoteEvent) GetParam() *MsgVoteGetParam {
-	return  &e.param
+	return  e.Param
 }
 
 func (e *VoteEvent) exec() {
-	for{
 		select {
 		case <-e.ticker.C:
-			forSize := len(e.status.forList)
-			againstSize := len(e.status.againstList)
-			abstainedSize := len(e.status.abstainedList)
+			forSize := len(e.Status.ForList)
+			againstSize := len(e.Status.AgainstList)
+			abstainedSize := len(e.Status.AbstainedList)
 
 			currentRate := float64(forSize / (forSize + againstSize + abstainedSize)) * 100
 
-			if currentRate - float64(e.param.passRate) > 0 {
+			if currentRate - float64(e.Param.PassRate) > 0 {
 
 				//TODO:
 			}
 			return
 		}
-	}
 }

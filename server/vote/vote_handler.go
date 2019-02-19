@@ -44,7 +44,7 @@ func (v *VoteHandler) poll(){
 			for i:= len(v.pendings)-1; i>=0; i--{
 				now := time.Now()
 				event:= v.pendings[i]
-				expires, _ := time.Parse(time.RFC850, event.status.expires)
+				expires, _ := time.Parse(time.RFC850, event.Status.Expires)
 				if now.After(expires){
 					v.pendings = append(v.pendings[:i], v.pendings[i+1:]...)
 				}
@@ -64,12 +64,12 @@ func (v *VoteHandler)run(){
 	for{
 		select {
 		case msg := <- v.toVote:
-			switch msg.typ {
+			switch msg.Typ {
 			case "new_vote":
 				go v.startNewEvent(msg)
 			case "vote":
 				go v.vote(msg)
-			case "status":
+			case "Status":
 				go v.getEventStatus(msg)
 			default:
 				log.Printf("Unrecognized message in voting run loop")
@@ -84,25 +84,25 @@ func (v *VoteHandler)run(){
 
 func (v *VoteHandler) startNewEvent(msg *MsgToVote){
 
-	if msg.newVote == nil {
+	if msg.NewVote == nil {
 		log.Printf("New vote info missing")
 	}
 
 
 	//TODO if possible to use map instead array
 	for _,e:= range v.pendings{
-		if e.topic == msg.topic{
-		log.Printf("Already exist a vote for this topic")
+		if e.Topic == msg.Topic {
+		log.Printf("Already exist a vote for this Topic")
 			return
 		}
 	}
 
-	event:= NewVoteEvent(msg.owner,
-		msg.topic,
-		&msg.newVote.proposal,
-		msg.newVote.duration,
-		msg.newVote.passRate,
-		msg.newVote.voterList)
+	event:= NewVoteEvent(msg.Owner,
+		msg.Topic,
+		&msg.NewVote.Proposal,
+		msg.NewVote.Furation,
+		msg.NewVote.PassRate,
+		msg.NewVote.VoterList)
 
 	v.add<-event
 }
@@ -112,12 +112,12 @@ func (v *VoteHandler) getEventStatus(msg *MsgToVote){
 	//TODO: very ugly search
 	for _,e:= range v.pendings{
 
-		if e.topic == msg.topic{
+		if e.Topic == msg.Topic {
 
 			v.fromVote <- &MsgFromVote{
-					owner:msg.owner,
-					topic:msg.topic,
-					status:e.GetStatus(),
+					Owner:  msg.Owner,
+					Topic:  msg.Topic,
+					Status: e.GetStatus(),
 					}
 			return
 		}
@@ -131,8 +131,8 @@ func (v *VoteHandler) vote(msg *MsgToVote){
 	//TODO: very ugly search
 	for _,e:= range v.pendings{
 
-		if e.topic == msg.topic{
-			e.Vote(msg.owner, msg.ballot.value)
+		if e.Topic == msg.Topic {
+			e.Vote(msg.Owner, msg.Ballot.Value)
 			return
 		}
 	}
