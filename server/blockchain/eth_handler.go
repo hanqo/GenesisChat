@@ -184,7 +184,7 @@ func (h *ETHHandler) sendSignedTx(r *MsgToChain) {
 			TxHash:       tx.Hash().String(),
 			GasPrice:     tx.GasPrice().Int64(),
 			Nonce:        tx.Nonce(),
-			gasEstimated: est,
+			GasEstimated: est,
 		},}
 }
 

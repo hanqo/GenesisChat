@@ -15,12 +15,12 @@ type MsgFromVote struct {
 	Typ   string
 
 	Status *MsgVoteStatus
-	Param  *MsgVoteGetParam
-	Set    *MsgVoteSetParam
+	Param  *MsgVoteCurrentParam
+	Result bool
 }
 
 type MsgNewVote struct {
-	Proposal  MsgVoteProposal
+	Proposal  *MsgVoteProposal
 	Duration  uint
 	PassRate  uint
 	VoterList []string
@@ -33,18 +33,15 @@ type MsgBallot struct {
 }
 
 type MsgVoteStatus struct {
-
 	ForList       []string
 	AgainstList   []string
 	AbstainedList []string
-	CurVoterList  []string //current voter list, remove voter after his vote.
 
 	Start   string
 	Expires string
 }
 
-type MsgVoteGetParam struct {
-
+type MsgVoteCurrentParam struct {
 	Duration  uint
 	PassRate  uint // 0 <= PassRate <= 100
 	VoterSize uint // number of all voters
@@ -55,7 +52,7 @@ type MsgVoteProposal struct {
 	Data interface{}
 }
 
-type MsgVoteSetParam struct {
-	Duration uint
-	PassRate uint
+type MsgVoteResult struct {
+	Topic string
+	Value bool
 }

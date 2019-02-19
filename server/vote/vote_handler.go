@@ -2,141 +2,158 @@ package vote
 
 import (
 	"log"
-	"time"
 )
 
 type VoteHandler struct {
 
-   pendings 	[]*VoteEvent
+   pendings 	map[string]	*VoteEvent
 
-   toVote   	chan *MsgToVote
-   fromVote 	chan *MsgFromVote
+   ToVote     chan *MsgToVote
+   FromVote   chan *MsgFromVote
+   resultVote chan *MsgVoteResult
 
-   runDone 		chan bool
-   pollDone 	chan bool
-
-   ticker       *time.Ticker
-   add		    chan *VoteEvent
-
+   RunDone   chan bool
+   EpollDone chan bool
 }
 
 func NewVoteHandler() *VoteHandler{
 	v := &VoteHandler{
-		toVote:			make(chan *MsgToVote,1),
-		fromVote:		make(chan *MsgFromVote,1),
-		runDone:		make(chan bool, 1),
-		pollDone:		make(chan bool, 1),
+		ToVote:     make(chan *MsgToVote,1),
+		FromVote:   make(chan *MsgFromVote,1),
+		resultVote: make(chan *MsgVoteResult,1000),
 
-		ticker:			time.NewTicker(time.Second * 1),
-		add:    		make(chan *VoteEvent,1),
+		RunDone:   make(chan bool, 1),
+		EpollDone: make(chan bool, 1),
+
 	}
 	go v.run()
-	go v.poll()
+	go v.epoll()
 	return v
 
 }
 
-func (v *VoteHandler) poll(){
+func (v *VoteHandler) epoll(){
 
 	for{
 		select {
-		case <-v.ticker.C:
-			for i:= len(v.pendings)-1; i>=0; i--{
-				now := time.Now()
-				event:= v.pendings[i]
-				expires, _ := time.Parse(time.RFC850, event.Status.Expires)
-				if now.After(expires){
-					v.pendings = append(v.pendings[:i], v.pendings[i+1:]...)
-				}
+		case r :=<-v.resultVote:
+			e, ok := v.pendings[r.Topic]
+
+			if ok != true {
+				log.Fatal("Epoll error, vote event not exist")
+				return
 			}
-		case s:= <-v.add:
-			v.pendings = append(v.pendings,s)
-		case <-v.pollDone:
+
+			v.FromVote <- &MsgFromVote{
+				Owner:			e.Owner,
+				Topic:			e.Topic,
+				Typ:            "result",
+				Result: 	r.Value,
+			}
+
+			delete(v.pendings, r.Topic)
+
+		case <-v.EpollDone:
 			log.Printf("Stop Vote handler polling")
 			return
-
 			}
 		}
-
 }
 
 func (v *VoteHandler)run(){
 	for{
 		select {
-		case msg := <- v.toVote:
+		case msg := <- v.ToVote:
 			switch msg.Typ {
 			case "new_vote":
 				go v.startNewEvent(msg)
 			case "vote":
 				go v.vote(msg)
-			case "Status":
+			case "status":
 				go v.getEventStatus(msg)
 			default:
 				log.Printf("Unrecognized message in voting run loop")
 			}
-		case <-v.runDone:
+		case <-v.RunDone:
 			log.Printf("Stop Vote hanlder running")
 			return
 		}
 	}
-
 }
 
-func (v *VoteHandler) startNewEvent(msg *MsgToVote){
+func (v *VoteHandler) startNewEvent(msg *MsgToVote) bool{
 
 	if msg.NewVote == nil {
-		log.Printf("New vote info missing")
+		log.Fatal("New vote info missing")
+		return false
 	}
 
+	_, ok := v.pendings[msg.Topic]
 
-	//TODO if possible to use map instead array
-	for _,e:= range v.pendings{
-		if e.Topic == msg.Topic {
-		log.Printf("Already exist a vote for this Topic")
-			return
-		}
+	if ok == true {
+		log.Fatal("Already exist a vote for this topic")
+		return false
 	}
 
 	event:= NewVoteEvent(msg.Owner,
 		msg.Topic,
-		&msg.NewVote.Proposal,
-		msg.NewVote.Furation,
+		msg.NewVote.Proposal,
+		msg.NewVote.Duration,
 		msg.NewVote.PassRate,
-		msg.NewVote.VoterList)
+		msg.NewVote.VoterList,
+		v.resultVote)
 
-	v.add<-event
+	v.pendings[event.Topic] = event
+	return true
 }
 
-func (v *VoteHandler) getEventStatus(msg *MsgToVote){
+func (v *VoteHandler) getEventStatus(msg *MsgToVote) bool{
 
-	//TODO: very ugly search
-	for _,e:= range v.pendings{
+	e, ok := v.pendings[msg.Topic]
 
-		if e.Topic == msg.Topic {
-
-			v.fromVote <- &MsgFromVote{
-					Owner:  msg.Owner,
-					Topic:  msg.Topic,
-					Status: e.GetStatus(),
-					}
-			return
-		}
+	if ok != true {
+		log.Fatal("Event not exists")
+		return false
 	}
 
-	log.Fatal("Event not exist")
+	v.FromVote <- &MsgFromVote{
+		Owner:		msg.Owner,
+		Topic:		msg.Topic,
+		Typ:        "status",
+		Status:	e.GetStatus(),
+	}
+	return true
 }
 
-func (v *VoteHandler) vote(msg *MsgToVote){
+func (v *VoteHandler) getEventParam(msg *MsgToVote) bool{
 
-	//TODO: very ugly search
-	for _,e:= range v.pendings{
+	e, ok := v.pendings[msg.Topic]
 
-		if e.Topic == msg.Topic {
-			e.Vote(msg.Owner, msg.Ballot.Value)
-			return
-		}
+	if ok != true {
+		log.Fatal("Event not exists")
+		return false
 	}
 
-	log.Fatal("Event not exist")
+	v.FromVote <- &MsgFromVote{
+		Owner:		msg.Owner,
+		Topic:		msg.Topic,
+		Typ:        "param",
+		Param:	e.GetParam(),
+	}
+	return true
+}
+
+func (v *VoteHandler) vote(msg *MsgToVote)bool{
+
+
+	e, ok := v.pendings[msg.Topic]
+
+	if ok != true {
+		log.Fatal("Event not exists")
+		return false
+	}
+
+	e.Vote(msg.Owner, msg.Ballot.Value)
+	return true
 }
 
