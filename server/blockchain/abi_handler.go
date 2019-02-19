@@ -139,14 +139,14 @@ func (h *ABIHandler) packContractFunc(name string, inputs []string) [] byte {
 
 }
 
-func  (h *ABIHandler)unpackContractFunc(data []byte, name string) (string, error){
+func (h *ABIHandler) unpackContractFunc(data []byte, name string) (string, error) {
 	var output string
 	var err error
 
 	switch name {
 	case "lookup":
 		var tmp bool
-		err = h.abiObject.Unpack(&tmp,name,data)
+		err = h.abiObject.Unpack(&tmp, name, data)
 		if err != nil {
 			log.Fatal("input string not valid in contract getCitizen")
 			return "", err
@@ -157,66 +157,66 @@ func  (h *ABIHandler)unpackContractFunc(data []byte, name string) (string, error
 	case "getCitizenList":
 
 		type citizen struct {
-			name string
+			name    string
 			balance *big.Int
 		}
 		var tmp [] citizen
-		err = h.abiObject.Unpack(&tmp,name,data)
+		err = h.abiObject.Unpack(&tmp, name, data)
 		if err != nil {
 			log.Fatal("input string not valid in contract getCitizen")
 			return "", err
 		}
 
-		btmp,_ := json.Marshal(tmp)
+		btmp, _ := json.Marshal(tmp)
 		output = string(btmp)
 
 		//TODO: change in contract from getCitizenList to getCitizen
 	case "getCitizen":
 		type citizen struct {
-			name string
+			name    string
 			balance *big.Int
 		}
 		var tmp citizen
 
-		err = h.abiObject.Unpack(&tmp,name,data)
-		btmp,_ := json.Marshal(tmp)
+		err = h.abiObject.Unpack(&tmp, name, data)
+		btmp, _ := json.Marshal(tmp)
 
 		output = string(btmp)
 
 	case "getBalance":
 		var tmp *big.Int
-		err = h.abiObject.Unpack(&tmp,name,data)
+		err = h.abiObject.Unpack(&tmp, name, data)
 
 		output = tmp.String()
 
 	case "getName":
-		err = h.abiObject.Unpack(&output,name,data)
+		err = h.abiObject.Unpack(&output, name, data)
 
 	case "getDescription":
-		err = h.abiObject.Unpack(&output,name,data)
+		err = h.abiObject.Unpack(&output, name, data)
 
 	case "getProgramAddr":
-		err = h.abiObject.Unpack(&output,name,data)
+		err = h.abiObject.Unpack(&output, name, data)
 
 	case "getProgramURL":
-		err = h.abiObject.Unpack(&output,name,data)
+		err = h.abiObject.Unpack(&output, name, data)
 
 	case "getEntryCost":
 		var tmp *big.Int
-		err = h.abiObject.Unpack(&tmp,name,data)
+		err = h.abiObject.Unpack(&tmp, name, data)
 
 		output = fmt.Sprint(tmp)
 
 	case "getExitCost":
 		var tmp *big.Int
-		err = h.abiObject.Unpack(&tmp,name,data)
+		err = h.abiObject.Unpack(&tmp, name, data)
 
 		output = tmp.String()
 
 	case "getTreasury":
 
 		var tmp *big.Int
-		err = h.abiObject.Unpack(&tmp,name,data)
+		err = h.abiObject.Unpack(&tmp, name, data)
 
 		output = tmp.String()
 
@@ -227,7 +227,7 @@ func  (h *ABIHandler)unpackContractFunc(data []byte, name string) (string, error
 
 	if err != nil {
 		log.Fatal("Not able to pack contract function")
-		return "",err
+		return "", err
 	}
 	return output, nil
 
