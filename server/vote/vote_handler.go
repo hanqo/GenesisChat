@@ -2,29 +2,31 @@ package vote
 
 import (
 	"log"
+	"sync"
 )
 
 type VoteHandler struct {
+	pendings map[string]*VoteEvent
 
-   pendings 	map[string]	*VoteEvent
+	ToVote     chan *MsgToVote
+	FromVote   chan *MsgFromVote
+	resultVote chan *MsgVoteResult
 
-   ToVote     chan *MsgToVote
-   FromVote   chan *MsgFromVote
-   resultVote chan *MsgVoteResult
+	RunDone   chan bool
+	EpollDone chan bool
 
-   RunDone   chan bool
-   EpollDone chan bool
+	mutex sync.Mutex
 }
 
-func NewVoteHandler() *VoteHandler{
+func NewVoteHandler() *VoteHandler {
 	v := &VoteHandler{
-		ToVote:     make(chan *MsgToVote,1),
-		FromVote:   make(chan *MsgFromVote,1),
-		resultVote: make(chan *MsgVoteResult,1000),
+		ToVote:     make(chan *MsgToVote, 100),
+		FromVote:   make(chan *MsgFromVote, 100),
+		resultVote: make(chan *MsgVoteResult, 100),
+		pendings:   make(map[string]*VoteEvent),
 
 		RunDone:   make(chan bool, 1),
 		EpollDone: make(chan bool, 1),
-
 	}
 	go v.run()
 	go v.epoll()
@@ -32,38 +34,39 @@ func NewVoteHandler() *VoteHandler{
 
 }
 
-func (v *VoteHandler) epoll(){
+func (v *VoteHandler) epoll() {
 
-	for{
+	for {
 		select {
-		case r :=<-v.resultVote:
+		case r := <-v.resultVote:
+			v.mutex.Lock()
 			e, ok := v.pendings[r.Topic]
 
 			if ok != true {
 				log.Fatal("Epoll error, vote event not exist")
-				return
+				break
 			}
 
 			v.FromVote <- &MsgFromVote{
-				Owner:			e.Owner,
-				Topic:			e.Topic,
-				Typ:            "result",
-				Result: 	r.Value,
+				Owner:  e.Owner,
+				Topic:  e.Topic,
+				Typ:    "result",
+				Result: r.Value,
 			}
 
 			delete(v.pendings, r.Topic)
-
+			v.mutex.Unlock()
 		case <-v.EpollDone:
 			log.Printf("Stop Vote handler polling")
 			return
-			}
 		}
+	}
 }
 
-func (v *VoteHandler)run(){
-	for{
+func (v *VoteHandler) run() {
+	for {
 		select {
-		case msg := <- v.ToVote:
+		case msg := <-v.ToVote:
 			switch msg.Typ {
 			case "new_vote":
 				go v.startNewEvent(msg)
@@ -71,6 +74,8 @@ func (v *VoteHandler)run(){
 				go v.vote(msg)
 			case "status":
 				go v.getEventStatus(msg)
+			case "parameter":
+				go v.getEventParam(msg)
 			default:
 				log.Printf("Unrecognized message in voting run loop")
 			}
@@ -81,13 +86,14 @@ func (v *VoteHandler)run(){
 	}
 }
 
-func (v *VoteHandler) startNewEvent(msg *MsgToVote) bool{
+func (v *VoteHandler) startNewEvent(msg *MsgToVote) bool {
 
 	if msg.NewVote == nil {
 		log.Fatal("New vote info missing")
 		return false
 	}
-
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
 	_, ok := v.pendings[msg.Topic]
 
 	if ok == true {
@@ -95,7 +101,7 @@ func (v *VoteHandler) startNewEvent(msg *MsgToVote) bool{
 		return false
 	}
 
-	event:= NewVoteEvent(msg.Owner,
+	event := NewVoteEvent(msg.Owner,
 		msg.Topic,
 		msg.NewVote.Proposal,
 		msg.NewVote.Duration,
@@ -107,46 +113,54 @@ func (v *VoteHandler) startNewEvent(msg *MsgToVote) bool{
 	return true
 }
 
-func (v *VoteHandler) getEventStatus(msg *MsgToVote) bool{
-
+func (v *VoteHandler) getEventStatus(msg *MsgToVote) bool {
+	v.mutex.Lock()
 	e, ok := v.pendings[msg.Topic]
+	v.mutex.Unlock()
+
+	if ok != true {
+		log.Fatal("Event not exists")
+		return false
+	}
+	status, _ := e.GetStatus(msg.Owner)
+
+	v.FromVote <- &MsgFromVote{
+		Owner:  msg.Owner,
+		Topic:  msg.Topic,
+		Typ:    "status",
+		Status: status,
+	}
+	return true
+}
+
+func (v *VoteHandler) getEventParam(msg *MsgToVote) bool {
+
+	v.mutex.Lock()
+	e, ok := v.pendings[msg.Topic]
+	v.mutex.Unlock()
 
 	if ok != true {
 		log.Fatal("Event not exists")
 		return false
 	}
 
+	param, _ := e.GetParam(msg.Owner)
+
 	v.FromVote <- &MsgFromVote{
-		Owner:		msg.Owner,
-		Topic:		msg.Topic,
-		Typ:        "status",
-		Status:	e.GetStatus(),
+		Owner: msg.Owner,
+		Topic: msg.Topic,
+		Typ:   "parameter",
+		Param: param,
 	}
 	return true
 }
 
-func (v *VoteHandler) getEventParam(msg *MsgToVote) bool{
+func (v *VoteHandler) vote(msg *MsgToVote) bool {
 
+
+	v.mutex.Lock()
 	e, ok := v.pendings[msg.Topic]
-
-	if ok != true {
-		log.Fatal("Event not exists")
-		return false
-	}
-
-	v.FromVote <- &MsgFromVote{
-		Owner:		msg.Owner,
-		Topic:		msg.Topic,
-		Typ:        "param",
-		Param:	e.GetParam(),
-	}
-	return true
-}
-
-func (v *VoteHandler) vote(msg *MsgToVote)bool{
-
-
-	e, ok := v.pendings[msg.Topic]
+	v.mutex.Unlock()
 
 	if ok != true {
 		log.Fatal("Event not exists")
@@ -156,4 +170,3 @@ func (v *VoteHandler) vote(msg *MsgToVote)bool{
 	e.Vote(msg.Owner, msg.Ballot.Value)
 	return true
 }
-

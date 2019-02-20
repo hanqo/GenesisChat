@@ -39,7 +39,7 @@ func TestVoteEvent(t *testing.T) {
 	event.Vote("voter8", 2)
 	time.Sleep(time.Second * 1)
 
-	param := event.GetParam()
+	param,_ := event.GetParam("voter1")
 
 	if param.PassRate != 33 {
 		t.Error("Passrate is not as expected")
@@ -49,7 +49,7 @@ func TestVoteEvent(t *testing.T) {
 		t.Error("Duration is not as expected")
 	}
 
-	status := event.GetStatus()
+	status,_ := event.GetStatus("voter1")
 
 	if len(status.ForList) != 5 ||
 		len(status.AgainstList) != 2 ||
@@ -74,12 +74,14 @@ func TestVoteEvent(t *testing.T) {
 		fmt.Printf("%s\t", item)
 	}
 	fmt.Printf("\n")
+	fmt.Printf("Start time in %s\n", status.Start)
+	fmt.Printf("Expire time in %s\n", status.Expires)
 
 	select {
 	case msg := <-resultVote:
+		fmt.Printf("Result for topic %s is %v", msg.Topic, msg.Value)
 		if msg.Topic != "test_topic" ||
 			msg.Value != true {
-			fmt.Printf("Result for topic %s is %v", msg.Topic, msg.Value)
 			t.Error("Vote Result not correct")
 		}
 	}

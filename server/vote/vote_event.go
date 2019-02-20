@@ -2,6 +2,7 @@ package vote
 
 import (
 	"log"
+	"sync"
 	"time"
 )
 
@@ -17,6 +18,7 @@ type VoteEvent struct {
 	votedMap map[string]bool
 
 	chanResult chan *MsgVoteResult
+	mutex    sync.Mutex
 }
 
 func NewVoteEvent(
@@ -34,6 +36,7 @@ func NewVoteEvent(
 	durationTime := time.Duration(duration) * time.Second
 	expiresTime := nowTime.Add(durationTime)
 	expiresStr := expiresTime.Format(time.RFC850)
+
 
 	votedMap := make(map[string]bool)
 
@@ -82,9 +85,8 @@ func (e *VoteEvent) Vote(voter string, value uint) bool {
 		return false
 	}
 
+	e.mutex.Lock()
 	e.votedMap[voter] = false
-	//e.mutex.Lock()
-
 	switch value {
 	case 0:
 		e.Status.AgainstList = append(e.Status.AgainstList, voter)
@@ -93,22 +95,40 @@ func (e *VoteEvent) Vote(voter string, value uint) bool {
 	default:
 		e.Status.AbstainedList = append(e.Status.AbstainedList, voter)
 	}
-	//e.mutex.Unlock()
+	e.mutex.Unlock()
 	return true
 }
 
-func (e *VoteEvent) GetStatus() *MsgVoteStatus {
-	return e.Status
+func (e *VoteEvent) GetStatus(voter string) (*MsgVoteStatus, bool) {
+	_, ok := e.votedMap[voter]
+
+	if ok != true  {
+		log.Fatal("Only candidates can access status")
+		return nil, false
+	}
+
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+	return e.Status,true
 }
 
-func (e *VoteEvent) GetParam() *MsgVoteCurrentParam {
-	return e.Param
+func (e *VoteEvent) GetParam(voter string) (*MsgVoteCurrentParam,bool) {
+	_, ok := e.votedMap[voter]
+
+	if ok != true  {
+		log.Fatal("Only candidates can access parameter")
+		return nil, false
+	}
+	return e.Param, true
 }
 
 func (e *VoteEvent) timeOut() {
 	select {
 	case <-e.ticker.C:
+		e.mutex.Lock()
 		forSize := len(e.Status.ForList)
+		e.mutex.Unlock()
+
 		currentRate := float64(forSize)/float64(len(e.votedMap)) * 100
 
 		if currentRate-float64(e.Param.PassRate) > 0 {

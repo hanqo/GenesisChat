@@ -27,8 +27,6 @@ type MsgNewVote struct {
 }
 
 type MsgBallot struct {
-	Owner string
-	Topic string
 	Value uint
 }
 
