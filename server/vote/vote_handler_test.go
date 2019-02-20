@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-/*func TestVoteHandler1(t *testing.T){
+func TestVoteHandler1(t *testing.T){
 	v:= NewVoteHandler()
 	v.ToVote <- &MsgToVote{
 		Owner:"test_owner1",
@@ -86,7 +86,7 @@ import (
 		}
 	}
 
-}*/
+}
 
 func TestVoteHandler2(t *testing.T){
 	v:= NewVoteHandler()
