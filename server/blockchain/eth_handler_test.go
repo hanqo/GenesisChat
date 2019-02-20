@@ -123,7 +123,7 @@ func TestSendSignedTx(t *testing.T) {
 				fmt.Printf("naive tx Sent with hash: %s\n", msg.TxSent.TxHash)
 				fmt.Printf("naive tx Sent with gas price: %d\n", msg.TxSent.GasPrice)
 				fmt.Printf("naive tx Sent with Nonce: %d\n", msg.TxSent.Nonce)
-				fmt.Printf("naive tx Sent with estimated gas: %d\n", msg.TxSent.gasEstimated)
+				fmt.Printf("naive tx Sent with estimated gas: %d\n", msg.TxSent.GasEstimated)
 			} else if msg.TxReceipt != nil {
 				fmt.Printf("naive tx Confirmed with hash: %s\n", msg.TxReceipt.TxHash)
 				fmt.Printf("naive tx Confirmed with gas cost: %d\n", msg.TxReceipt.GasUsed)
@@ -154,7 +154,7 @@ func TestDeployContract(t *testing.T) {
 				fmt.Printf("deploy tx Sent with hash: %s\n", msg.TxSent.TxHash)
 				fmt.Printf("deploy tx Sent with gas price: %d\n", msg.TxSent.GasPrice)
 				fmt.Printf("deploy tx Sent with Nonce: %d\n", msg.TxSent.Nonce)
-				fmt.Printf("deploy tx Sent with estimated gas: %d\n", msg.TxSent.gasEstimated)
+				fmt.Printf("deploy tx Sent with estimated gas: %d\n", msg.TxSent.GasEstimated)
 			}else if msg.TxInfo != nil{
 				if msg.TxInfo.Function != m.RequestTx.Function {
 					t.Error("Function name not equal")
@@ -211,7 +211,7 @@ func TestSetContract(t *testing.T) {
 				fmt.Printf("set tx Sent with hash: %s\n", msg.TxSent.TxHash)
 				fmt.Printf("set tx Sent with gas price: %d\n", msg.TxSent.GasPrice)
 				fmt.Printf("set tx Sent with nonce: %d\n", msg.TxSent.Nonce)
-				fmt.Printf("set tx Sent with estimated gas: %d\n", msg.TxSent.gasEstimated)
+				fmt.Printf("set tx Sent with estimated gas: %d\n", msg.TxSent.GasEstimated)
 			} else if msg.TxInfo != nil {
 				rawTxData3 := generateRawTxSetContract(500000, msg.TxInfo.GasPrice, msg.TxInfo.Nonce, msg.TxInfo.Data)
 

@@ -2,141 +2,171 @@ package vote
 
 import (
 	"log"
-	"time"
+	"sync"
 )
 
 type VoteHandler struct {
+	pendings map[string]*VoteEvent
 
-   pendings 	[]*VoteEvent
+	ToVote     chan *MsgToVote
+	FromVote   chan *MsgFromVote
+	resultVote chan *MsgVoteResult
 
-   toVote   	chan *MsgToVote
-   fromVote 	chan *MsgFromVote
+	RunDone   chan bool
+	EpollDone chan bool
 
-   runDone 		chan bool
-   pollDone 	chan bool
-
-   ticker       *time.Ticker
-   add		    chan *VoteEvent
-
+	mutex sync.Mutex
 }
 
-func NewVoteHandler() *VoteHandler{
+func NewVoteHandler() *VoteHandler {
 	v := &VoteHandler{
-		toVote:			make(chan *MsgToVote,1),
-		fromVote:		make(chan *MsgFromVote,1),
-		runDone:		make(chan bool, 1),
-		pollDone:		make(chan bool, 1),
+		ToVote:     make(chan *MsgToVote, 100),
+		FromVote:   make(chan *MsgFromVote, 100),
+		resultVote: make(chan *MsgVoteResult, 100),
+		pendings:   make(map[string]*VoteEvent),
 
-		ticker:			time.NewTicker(time.Second * 1),
-		add:    		make(chan *VoteEvent,1),
+		RunDone:   make(chan bool, 1),
+		EpollDone: make(chan bool, 1),
 	}
 	go v.run()
-	go v.poll()
+	go v.epoll()
 	return v
 
 }
 
-func (v *VoteHandler) poll(){
+func (v *VoteHandler) epoll() {
 
-	for{
+	for {
 		select {
-		case <-v.ticker.C:
-			for i:= len(v.pendings)-1; i>=0; i--{
-				now := time.Now()
-				event:= v.pendings[i]
-				expires, _ := time.Parse(time.RFC850, event.status.expires)
-				if now.After(expires){
-					v.pendings = append(v.pendings[:i], v.pendings[i+1:]...)
-				}
+		case r := <-v.resultVote:
+			v.mutex.Lock()
+			e, ok := v.pendings[r.Topic]
+
+			if ok != true {
+				log.Fatal("Epoll error, vote event not exist")
+				break
 			}
-		case s:= <-v.add:
-			v.pendings = append(v.pendings,s)
-		case <-v.pollDone:
+
+			v.FromVote <- &MsgFromVote{
+				Owner:  e.Owner,
+				Topic:  e.Topic,
+				Typ:    "result",
+				Result: r.Value,
+			}
+
+			delete(v.pendings, r.Topic)
+			v.mutex.Unlock()
+		case <-v.EpollDone:
 			log.Printf("Stop Vote handler polling")
 			return
-
-			}
 		}
-
+	}
 }
 
-func (v *VoteHandler)run(){
-	for{
+func (v *VoteHandler) run() {
+	for {
 		select {
-		case msg := <- v.toVote:
-			switch msg.typ {
+		case msg := <-v.ToVote:
+			switch msg.Typ {
 			case "new_vote":
 				go v.startNewEvent(msg)
 			case "vote":
 				go v.vote(msg)
 			case "status":
 				go v.getEventStatus(msg)
+			case "parameter":
+				go v.getEventParam(msg)
 			default:
 				log.Printf("Unrecognized message in voting run loop")
 			}
-		case <-v.runDone:
+		case <-v.RunDone:
 			log.Printf("Stop Vote hanlder running")
 			return
 		}
 	}
-
 }
 
-func (v *VoteHandler) startNewEvent(msg *MsgToVote){
+func (v *VoteHandler) startNewEvent(msg *MsgToVote) bool {
 
-	if msg.newVote == nil {
-		log.Printf("New vote info missing")
+	if msg.NewVote == nil {
+		log.Fatal("New vote info missing")
+		return false
+	}
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
+	_, ok := v.pendings[msg.Topic]
+
+	if ok == true {
+		log.Fatal("Already exist a vote for this topic")
+		return false
 	}
 
+	event := NewVoteEvent(msg.Owner,
+		msg.Topic,
+		msg.NewVote.Proposal,
+		msg.NewVote.Duration,
+		msg.NewVote.PassRate,
+		msg.NewVote.VoterList,
+		v.resultVote)
 
-	//TODO if possible to use map instead array
-	for _,e:= range v.pendings{
-		if e.topic == msg.topic{
-		log.Printf("Already exist a vote for this topic")
-			return
-		}
-	}
-
-	event:= NewVoteEvent(msg.owner,
-		msg.topic,
-		&msg.newVote.proposal,
-		msg.newVote.duration,
-		msg.newVote.passRate,
-		msg.newVote.voterList)
-
-	v.add<-event
+	v.pendings[event.Topic] = event
+	return true
 }
 
-func (v *VoteHandler) getEventStatus(msg *MsgToVote){
+func (v *VoteHandler) getEventStatus(msg *MsgToVote) bool {
+	v.mutex.Lock()
+	e, ok := v.pendings[msg.Topic]
+	v.mutex.Unlock()
 
-	//TODO: very ugly search
-	for _,e:= range v.pendings{
-
-		if e.topic == msg.topic{
-
-			v.fromVote <- &MsgFromVote{
-					owner:msg.owner,
-					topic:msg.topic,
-					status:e.GetStatus(),
-					}
-			return
-		}
+	if ok != true {
+		log.Fatal("Event not exists")
+		return false
 	}
+	status, _ := e.GetStatus(msg.Owner)
 
-	log.Fatal("Event not exist")
+	v.FromVote <- &MsgFromVote{
+		Owner:  msg.Owner,
+		Topic:  msg.Topic,
+		Typ:    "status",
+		Status: status,
+	}
+	return true
 }
 
-func (v *VoteHandler) vote(msg *MsgToVote){
+func (v *VoteHandler) getEventParam(msg *MsgToVote) bool {
 
-	//TODO: very ugly search
-	for _,e:= range v.pendings{
+	v.mutex.Lock()
+	e, ok := v.pendings[msg.Topic]
+	v.mutex.Unlock()
 
-		if e.topic == msg.topic{
-			e.Vote(msg.owner, msg.ballot.value)
-			return
-		}
+	if ok != true {
+		log.Fatal("Event not exists")
+		return false
 	}
 
-	log.Fatal("Event not exist")
+	param, _ := e.GetParam(msg.Owner)
+
+	v.FromVote <- &MsgFromVote{
+		Owner: msg.Owner,
+		Topic: msg.Topic,
+		Typ:   "parameter",
+		Param: param,
+	}
+	return true
 }
 
+func (v *VoteHandler) vote(msg *MsgToVote) bool {
+
+
+	v.mutex.Lock()
+	e, ok := v.pendings[msg.Topic]
+	v.mutex.Unlock()
+
+	if ok != true {
+		log.Fatal("Event not exists")
+		return false
+	}
+
+	e.Vote(msg.Owner, msg.Ballot.Value)
+	return true
+}

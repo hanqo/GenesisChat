@@ -1,62 +1,56 @@
 package vote
 
 type MsgToVote struct {
-	owner 		string
-	topic 		string
-	typ 		string
+	Owner string
+	Topic string
+	Typ   string
 
-	newVote 	*MsgNewVote
-	ballot  	*MsgBallot
+	NewVote *MsgNewVote
+	Ballot  *MsgBallot
 }
 
 type MsgFromVote struct {
-	owner 		string
-	topic 		string
-	typ 		string
+	Owner string
+	Topic string
+	Typ   string
 
-	status 		*MsgVoteStatus
-	param  		*MsgVoteGetParam
-	set     	*MsgVoteSetParam
+	Status *MsgVoteStatus
+	Param  *MsgVoteCurrentParam
+	Result bool
 }
 
 type MsgNewVote struct {
-	proposal 	MsgVoteProposal
-	duration    uint
-	passRate    uint
-	voterList   []string
+	Proposal  *MsgVoteProposal
+	Duration  uint
+	PassRate  uint
+	VoterList []string
 }
 
 type MsgBallot struct {
-	owner 		string
-	topic 		string
-	value       uint
+	Value uint
 }
 
 type MsgVoteStatus struct {
+	ForList       []string
+	AgainstList   []string
+	AbstainedList []string
 
-	forList				[]string
-	againstList			[]string
-	abstainedList       []string
-	curVoterList		[]string //current voter list, remove voter after his vote.
-
-	start 				string
-	expires      		string
+	Start   string
+	Expires string
 }
 
-type MsgVoteGetParam struct {
-
-	duration 			uint
-	passRate 			uint // 0 <= passRate <= 100
-	voterSize        	uint // number of all voters
+type MsgVoteCurrentParam struct {
+	Duration  uint
+	PassRate  uint // 0 <= PassRate <= 100
+	VoterSize uint // number of all voters
 }
 
 type MsgVoteProposal struct {
-	typ 				string
-	setValues 			*[]string
-	kickoutCitizens 	*[]string
+	Typ  string
+	Data interface{}
 }
 
-type MsgVoteSetParam struct {
-	duration     uint
-	passRate     uint
+type MsgVoteResult struct {
+	Topic string
+	Value bool
 }

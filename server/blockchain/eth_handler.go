@@ -35,8 +35,8 @@ type ETHHandler struct {
 func NewETHHandler() *ETHHandler {
 
 	h := &ETHHandler{
-		ToChains:   make(chan *MsgToChain, 1),
-		FromChains: make(chan *MsgFromChain, 1),
+		ToChains:   make(chan *MsgToChain, 100),
+		FromChains: make(chan *MsgFromChain, 100),
 		RunDone:    make(chan bool, 1),
 		PollDone:   make(chan bool, 1),
 
@@ -184,7 +184,7 @@ func (h *ETHHandler) sendSignedTx(r *MsgToChain) {
 			TxHash:       tx.Hash().String(),
 			GasPrice:     tx.GasPrice().Int64(),
 			Nonce:        tx.Nonce(),
-			gasEstimated: est,
+			GasEstimated: est,
 		},}
 }
 
