@@ -35,8 +35,8 @@ type ETHHandler struct {
 func NewETHHandler() *ETHHandler {
 
 	h := &ETHHandler{
-		ToChains:   make(chan *MsgToChain, 1),
-		FromChains: make(chan *MsgFromChain, 1),
+		ToChains:   make(chan *MsgToChain, 100),
+		FromChains: make(chan *MsgFromChain, 100),
 		RunDone:    make(chan bool, 1),
 		PollDone:   make(chan bool, 1),
 

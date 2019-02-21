@@ -1,112 +1,149 @@
 package vote
 
 import (
+	"log"
 	"sync"
 	"time"
 )
 
 type VoteEvent struct {
-	owner		string
-	topic       string
+	Owner string
+	Topic string
 
-	proposal MsgVoteProposal
-	param    MsgVoteGetParam
-	status   MsgVoteStatus
+	Proposal *MsgVoteProposal
+	Param    *MsgVoteCurrentParam
+	Status   *MsgVoteStatus
 
-	ticker 		*time.Ticker
-	mutex 		sync.Mutex
+	ticker   *time.Ticker
+	votedMap map[string]bool
 
+	chanResult chan *MsgVoteResult
+	mutex    sync.Mutex
 }
 
-func NewVoteEvent(owner string,
-	              topic string,
-	              proposal *MsgVoteProposal,
-	              duration uint,
-	              passRate uint,
-	              voterList []string) *VoteEvent{
+func NewVoteEvent(
+	owner string,
+	topic string,
+	proposal *MsgVoteProposal,
+	duration uint,
+	passRate uint,
+	voterList []string,
+	chanResult chan *MsgVoteResult) *VoteEvent {
 
-	nowTime:= time.Now().UTC()
+	nowTime := time.Now().UTC()
 	startStr := nowTime.Format(time.RFC850)
 
 	durationTime := time.Duration(duration) * time.Second
 	expiresTime := nowTime.Add(durationTime)
 	expiresStr := expiresTime.Format(time.RFC850)
 
+
+	votedMap := make(map[string]bool)
+
+	for _, v := range voterList {
+
+		votedMap[v] = false
+	}
+
 	e := &VoteEvent{
-		owner:		owner,
-		topic:		topic,
-		proposal: 	*proposal,
-		ticker: 	time.NewTicker(durationTime),
+		Owner:      owner,
+		Topic:      topic,
+		ticker:     time.NewTicker(durationTime),
+		votedMap:	votedMap,
+		chanResult: chanResult,
 
-		param: MsgVoteGetParam{
-			duration:duration,
-			passRate:passRate,
+		Proposal: proposal,
+		Param: &MsgVoteCurrentParam{
+			Duration: duration,
+			PassRate: passRate,
 
-			voterSize:uint(len(voterList)),
+			VoterSize: uint(len(voterList)),
 		},
 
-		status:MsgVoteStatus{
-			curVoterList: voterList,
-			start:startStr,
-			expires:expiresStr,
+		Status: &MsgVoteStatus{
+			Start:   startStr,
+			Expires: expiresStr,
 		},
 	}
-	go e.exec()
+	go e.timeOut()
 	return e
 }
 
-func (e *VoteEvent) Vote (voter string, ballot uint) bool{
+func (e *VoteEvent) Vote(voter string, value uint) bool {
 
-	  expires, _ := time.Parse(time.RFC850, e.status.expires)
-	  now := time.Now().UTC()
+	expires, _ := time.Parse(time.RFC850, e.Status.Expires)
+	now := time.Now().UTC()
 
-	  if  now.After(expires) {
-	  	return false
-	  }
-
-	for	i := len(e.status.curVoterList)-1; i>=0; i--{
-		v:= e.status.curVoterList[i]
-		if v == voter {
-			e.mutex.Lock()
-			switch ballot {
-			case 0:
-				e.status.againstList = append(e.status.againstList, voter)
-			case 1:
-				e.status.forList = append(e.status.forList, voter)
-			default:
-				e.status.abstainedList = append(e.status.abstainedList, voter)
-			}
-			e.mutex.Unlock()
-			e.status.curVoterList = append(e.status.curVoterList[:i], e.status.curVoterList[i+1:]...)
-			return true
-		}
+	if now.After(expires) {
+		return false
 	}
-	return false
+
+	v, ok := e.votedMap[voter]
+
+	if ok != true || v != false {
+		log.Fatal("Voter doesn't exist or voted")
+		return false
+	}
+
+	e.mutex.Lock()
+	e.votedMap[voter] = false
+	switch value {
+	case 0:
+		e.Status.AgainstList = append(e.Status.AgainstList, voter)
+	case 1:
+		e.Status.ForList = append(e.Status.ForList, voter)
+	default:
+		e.Status.AbstainedList = append(e.Status.AbstainedList, voter)
+	}
+	e.mutex.Unlock()
+	return true
 }
 
-func (e *VoteEvent) GetStatus() *MsgVoteStatus {
-	return &e.status
+func (e *VoteEvent) GetStatus(voter string) (*MsgVoteStatus, bool) {
+	_, ok := e.votedMap[voter]
+
+	if ok != true  {
+		log.Fatal("Only candidates can access status")
+		return nil, false
+	}
+
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+	return e.Status,true
 }
 
-func (e *VoteEvent) GetParam() *MsgVoteGetParam {
-	return  &e.param
+func (e *VoteEvent) GetParam(voter string) (*MsgVoteCurrentParam,bool) {
+	_, ok := e.votedMap[voter]
+
+	if ok != true  {
+		log.Fatal("Only candidates can access parameter")
+		return nil, false
+	}
+	return e.Param, true
 }
 
-func (e *VoteEvent) exec() {
-	for{
-		select {
-		case <-e.ticker.C:
-			forSize := len(e.status.forList)
-			againstSize := len(e.status.againstList)
-			abstainedSize := len(e.status.abstainedList)
+func (e *VoteEvent) timeOut() {
+	select {
+	case <-e.ticker.C:
+		e.mutex.Lock()
+		forSize := len(e.Status.ForList)
+		e.mutex.Unlock()
 
-			currentRate := float64(forSize / (forSize + againstSize + abstainedSize)) * 100
+		currentRate := float64(forSize)/float64(len(e.votedMap)) * 100
 
-			if currentRate - float64(e.param.passRate) > 0 {
-
-				//TODO:
+		if currentRate-float64(e.Param.PassRate) > 0 {
+			e.chanResult <- &MsgVoteResult{
+				Topic: e.Topic,
+				Value: true,
 			}
-			return
+
+		} else {
+			e.chanResult <- &MsgVoteResult{
+				Topic: e.Topic,
+				Value: false,
+			}
 		}
+
+		return
 	}
 }
