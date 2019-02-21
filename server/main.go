@@ -142,6 +142,7 @@ var globals struct {
 	maxFileUploadSize int64
 
 	// map from topic name to eth_handlers
+	// todo: maybe use one single global handler
 	bcHandlers map[string]*bc.ETHHandler
 }
 

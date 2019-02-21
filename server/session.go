@@ -1341,6 +1341,7 @@ func (s *Session) con(msg *ClientComMessage) {
 														 m.TxReceipt.TxHash, 0, 0, 0,
 														 m.TxReceipt.GasUsed, *m.TxReceipt.ContractAddr, true, "", "")
 					s.queueOut(res)
+					return
 				}
 			}
 		}(h, s, msg, t)
@@ -1366,16 +1367,16 @@ func (s *Session) con(msg *ClientComMessage) {
 		}
 
 		go func(h *bc.ETHHandler, s *Session, msg *ClientComMessage) {
-			for {
-				m := <-h.FromChains
-				if m.CallReturn != nil {
-					log.Printf("getter returns, fn = %s, output = %s", m.CallReturn.Function, m.CallReturn.Output)
-					var res *ServerComMessage
-					res = createConRes(msg.id, msg.timestamp, msg.topic, "get",
-														 "", 0, 0, 0, 0,
-														 msg.Con.Addr, true, m.CallReturn.Function, m.CallReturn.Output)
-					s.queueOut(res)
-				}
+			m := <-h.FromChains
+			if m.CallReturn != nil {
+				log.Printf("getter returns, fn = %s, output = %s", m.CallReturn.Function, m.CallReturn.Output)
+				var res *ServerComMessage
+				res = createConRes(msg.id, msg.timestamp, msg.topic, "get",
+													 "", 0, 0, 0, 0,
+													 msg.Con.Addr, true, m.CallReturn.Function, m.CallReturn.Output)
+				s.queueOut(res)
+			} else {
+				log.Println("we get no returns")
 			}
 		}(h, s, msg)
 
@@ -1457,6 +1458,7 @@ func (s *Session) con(msg *ClientComMessage) {
 														 m.TxReceipt.TxHash, 0, 0, 0,
 														 m.TxReceipt.GasUsed, *m.TxReceipt.ContractAddr, true, "", "")
 					s.queueOut(res)
+					return
 				}
 			}
 		}(h, s, msg, t)
