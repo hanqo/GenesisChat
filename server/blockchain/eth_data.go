@@ -16,7 +16,7 @@ type MsgToChain struct {
 type MsgCall struct {
 	ContractAddr string
 	ContractFunc MsgContractFunc
-	Value        *int64
+	Value        *int64  //money want to pay during call
 }
 
 type MsgContractFunc struct {
