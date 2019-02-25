@@ -189,10 +189,6 @@ func (h *ETHHandler) sendSignedTx(r *MsgToChain) {
 }
 
 func (h *ETHHandler) generateTxInfo(r *MsgToChain) {
-	if r.RequestTx == nil {
-		log.Fatal("request is empty")
-	}
-
 	c, err := ethclient.Dial(ethRPCAddr)
 	if err != nil {
 		log.Fatal(err)
