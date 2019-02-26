@@ -278,22 +278,16 @@ func pbCliSerialize(msg *ClientComMessage) *pbx.ClientMsg {
 	case msg.Tx != nil:
 		pkt.Message = &pbx.ClientMsg_Tx{Tx: &pbx.ClientTx{
 			What: msg.Tx.What,
-			Id: msg.Tx.Id,
 			User: msg.Tx.User,
-			From: msg.Tx.From,
+			PubAddr: msg.Tx.PubAddr,
 			Version: msg.Tx.Version,
 			ChainId: int32(msg.Tx.ChainId),
 			SignedTx: msg.Tx.SignedTx}}
 	case msg.Con != nil:
 		pkt.Message = &pbx.ClientMsg_Con{Con: &pbx.ClientCon{
 			What: msg.Con.What,
-			Id: msg.Con.Id,
-			User: msg.Con.User,
-			Topic: msg.Con.Topic,
-			From: msg.Con.From,
-			Version: msg.Con.Version,
-			ChainID: int32(msg.Con.ChainID),
-			Addr: msg.Con.Addr,
+			Tx: pbTxSerialize(msg.Con.Tx),
+			ConAddr: msg.Con.ConAddr,
 			Fn: msg.Con.Fn,
 			Inputs: msg.Con.Inputs,
 			Value: msg.Con.Value}}
@@ -401,19 +395,23 @@ func pbCliDeserialize(pkt *pbx.ClientMsg) *ClientComMessage {
 		case pbx.InfoNote_KP:
 			msg.Note.What = "kp"
 		}
+	} else if tx := pkt.GetTx(); tx != nil {
+		msg.Tx = &MsgClientTx{
+			What: tx.GetWhat(),
+			User: tx.GetUser(),
+			PubAddr: tx.GetPubAddr(),
+			Version: tx.GetVersion(),
+			ChainId: tx.GetChainId(),
+			SignedTx: tx.GetSignedTx(),
+		}
   } else if con := pkt.GetCon(); con != nil {
     msg.Con = &MsgClientCon{
         What: con.GetWhat(),
-        Id:   con.GetId(),
-        User: con.GetUser(),
-        Topic: con.GetTopic(),
-        From: con.GetFrom(),
-        Version: con.GetVersion(),
-        ChainID: con.GetChainID(),
-        Addr: con.GetAddr(),
+        Tx: pbTxDeserialize(con.GetTx()),
+        ConAddr: con.GetConAddr(),
         Fn: con.GetFn(),
         Inputs: con.GetInputs(),
-          Value: con.GetValue(),
+        Value: con.GetValue(),
     }
   }
 
@@ -924,4 +922,35 @@ func pbCredentialsDeserialize(in []*pbx.Credential) []MsgAccCred {
 	}
 
 	return out
+}
+
+// kai
+func pbTxSerialize(in *MsgClientTx) *pbx.ClientTx {
+	if in == nil {
+		return nil
+	}
+
+	return &pbx.ClientTx{
+		What: in.What,
+		User: in.User,
+		PubAddr: in.PubAddr,
+		Version: in.Version,
+		ChainId: in.ChainId,
+		SignedTx: in.SignedTx,
+	}
+}
+
+func pbTxDeserialize(in *pbx.ClientTx) *MsgClientTx {
+	if in == nil {
+		return nil
+	}
+
+	return &MsgClientTx{
+		What: in.What,
+		User: in.User,
+		PubAddr: in.PubAddr,
+		Version: in.Version,
+		ChainId: in.ChainId,
+		SignedTx: in.SignedTx,
+	}
 }

@@ -180,16 +180,15 @@ type MsgClientSub struct {
 type MsgClientTx struct {
 	// one of these: init, send
 	What string `json:"what"`
-	// message Id
-	Id string `json:"id,omitempty"`
+
   // User that initiates the action
-  User string `json:"user"`
-  // the public address
-  From string `json:"from"`
-  // version -- current unused
-  Version string `json:"version,omitempty"`
-  // chainid
-  ChainId int32 `json:"chainid,omitempty"`
+	User string `json:"user"`
+	// the public address
+	PubAddr string `json:"pubaddr"`
+	// version -- current unused
+	Version string `json:"version,omitempty"`
+	// chainid
+	ChainId int32 `json:"chainid,omitempty"`
 	// singed tx , required when what == send
 	SignedTx string `json:"signedtx,omitempty"`
 }
@@ -197,30 +196,20 @@ type MsgClientTx struct {
 // kai: smart contract related typedefs
 
 // MsgClientCon is a {con} message which represents client operation to smart contract
-// probably no need to define structs like MsgConDeploy MsgConGet MsgConSet as they have similar structs
+// not defining extra structs like MsgConDeploy MsgConGet MsgConSet to reduce levels
 type MsgClientCon struct {
   // what to do, one of these: deploy, get, set
   What string `json:"what"`
 
-  // message Id
-  Id string `json:"id,omitempty"`
-  // User that initiates the action
-  User string `json:"user"`
-  // (group) topic that this operation is related to
-  Topic string `json:"topic"`
-  // the public address
-  From string `json:"from"`
-  // version -- current unused
-  Version string `json:"version,omitempty"`
-  // chainID
-  ChainID int32 `json:"chainid,omitempty"`
-  // the address of the contract, ignored if what == deploy
-  Addr string `json:"addr,omitempty"`
-  // Function name: ignored if what == deploy as it's always referred to ctor
+  // the matched tx, required for |deploy| and |set|
+  Tx *MsgClientTx `json:"tx,omitempty"`
+  // the address of the contract, ignored for |deploy|
+  ConAddr string `json:"conaddr,omitempty"`
+  // function name, ignored for |deploy| (ctor is expected)
   Fn string `json:"fn,omitempty"`
   // args to the functions
   Inputs []string `json:"inputs,omitempty"`
-  // value (optional) if what == get, see MsgCall struct
+  // value, optional for |get|, see MsgCall struct
   Value int64 `json:"value,omitempty"`
 }
 
@@ -568,38 +557,23 @@ type MsgServerTxRes struct {
 	// see MsgTxReceipt struct
 	// acutal used gas amount
 	GasUsed uint64 `json:"gasused,omitempty"`
-	// contract addr, if any
-	ConAddr string `json:"conaddr,omitempty"`
 	// if this tx is confirmed
 	Confirmed bool `json:"confirmed,omitempty"`
 }
 
 // kai: MsgServerConRes is the server-side response to the smart contract msg
 type MsgServerConRes struct {
-	Topic string `json:"topic"`
 	// type of the conres, could be one of "deploy, get, set"
 	What string `json:"what"`
 
-	// the following is only valid when sending a tx (i.e. deploy and set)
-	// just lazy to make a struct for each type
-
-	// see MsgTxSent struct
-	// the tx hash if any
-	TxHash string `json:"txhash,omitempty"`
-	// the gas price
-	GasPrice int64 `json:"gasprice,omitempty"`
-	// nonce
-	Nonce uint64 `json:"nonce,omitempty"`
-	// the estimated gas amount
-	GasEstimated uint64 `json:"gasestimated,omitempty"`
-
-	// see MsgTxReceipt struct
-	// acutal used gas amount
-	GasUsed uint64 `json:"gasused,omitempty"`
-	// contract addr, especially for deployment
+	// corresponding topic
+	Topic string `json:"topic"`
+	// txres, for |deploy| and |set|
+	TxRes *MsgServerTxRes `json:"txres,omitempty"`
+  // data from binded contract, only valid for |deploy| and |set|
+	Data []byte `json:"data,omitempty"`
+	// contract addr, especially for |deploy|
 	ConAddr string `json:"conaddr,omitempty"`
-	// if this tx is confirmed
-	Confirmed bool `json:"confirmed,omitempty"`
 
 	// the following is valid when querying a contract (get)
 
@@ -617,6 +591,7 @@ type ServerComMessage struct {
 	Meta *MsgServerMeta `json:"meta,omitempty"`
 	Pres *MsgServerPres `json:"pres,omitempty"`
 	Info *MsgServerInfo `json:"info,omitempty"`
+	TxRes  *MsgServerTxRes  `json:"txres, omitempty"`
 	ConRes *MsgServerConRes `json:"conres,omitempty"`
 
 	// MsgServerData has no Id field, copying it here for use in {ctrl} aknowledgements
