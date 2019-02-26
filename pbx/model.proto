@@ -251,6 +251,18 @@ message ClientNote {
 	int32 seq_id = 3;
 }
 
+// kai: ClientTx is a client-genreated msg to initiate or send tx
+message ClientTx {
+	string what = 1;
+	string id = 2;
+	string user = 3;
+	string topic = 4;
+	string from = 5;
+	string version = 6;
+	int32 chain_id = 7;
+	string signed_tx = 8;
+}
+
 // Kai: ClientCon is a client-generated msg to interact with smart contracts
 message ClientCon {
 	string what = 1;
@@ -278,7 +290,8 @@ message ClientMsg {
 		ClientSet set = 8;
 		ClientDel del = 9;
 		ClientNote note = 10;
-		ClientCon con = 11;
+		ClientTx tx = 11;
+		ClientCon con = 14;
 	}
 	// Root user may send messages on behalf of other users.
 	string on_behalf_of = 12;

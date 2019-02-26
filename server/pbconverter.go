@@ -275,6 +275,15 @@ func pbCliSerialize(msg *ClientComMessage) *pbx.ClientMsg {
 			Topic: msg.Note.Topic,
 			What:  pbInfoNoteWhatSerialize(msg.Note.What),
 			SeqId: int32(msg.Note.SeqId)}}
+	case msg.Tx != nil:
+		pkt.Message = &pbx.ClientMsg_Tx{Tx: &pbx.ClientTx{
+			What: msg.Tx.What,
+			Id: msg.Tx.Id,
+			User: msg.Tx.User,
+			From: msg.Tx.From,
+			Version: msg.Tx.Version,
+			ChainId: int32(msg.Tx.ChainId),
+			SignedTx: msg.Tx.SignedTx}}
 	case msg.Con != nil:
 		pkt.Message = &pbx.ClientMsg_Con{Con: &pbx.ClientCon{
 			What: msg.Con.What,

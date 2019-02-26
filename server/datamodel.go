@@ -162,6 +162,38 @@ type MsgClientSub struct {
 	Get *MsgGetQuery `json:"get,omitempty"`
 }
 
+// kai: tx related typedefs
+
+// MsgClientTx is a {tx} message which represents client operation to a tx
+// it should be applied to the generic tx, not only contract tx.
+// the flow should be like this:
+// 1. client initiates a tx with sending: 
+//			tx: { what: "init"  ... }
+// 2. server replies with necessary infos to create a tx, e.g. gas price, nonce etc
+//			txres: { what: "init" ... } 
+// 3. client sends the actual tx with sending: 
+//			tx: { what: "send" ... }
+// 4. server replies with txres to indicate tx is received
+//			txres: { what: "send" , confirmed: false, ...}
+// 5. server replies with txres to indicate tx is confirmed (on the chain)
+//			txres: { what: "send", confirmed: true, ...}
+type MsgClientTx struct {
+	// one of these: init, send
+	What string `json:"what"`
+	// message Id
+	Id string `json:"id,omitempty"`
+  // User that initiates the action
+  User string `json:"user"`
+  // the public address
+  From string `json:"from"`
+  // version -- current unused
+  Version string `json:"version,omitempty"`
+  // chainid
+  ChainId int32 `json:"chainid,omitempty"`
+	// singed tx , required when what == send
+	SignedTx string `json:"signedtx,omitempty"`
+}
+
 // kai: smart contract related typedefs
 
 // MsgClientCon is a {con} message which represents client operation to smart contract
@@ -314,6 +346,7 @@ type ClientComMessage struct {
 	Set   *MsgClientSet   `json:"set"`
 	Del   *MsgClientDel   `json:"del"`
 	Note  *MsgClientNote  `json:"note"`
+	Tx    *MsgClientTx    `json:"tx"`
 	Con   *MsgClientCon   `json:"con"`
 
 	// Message ID denormalized
@@ -515,6 +548,30 @@ type MsgServerInfo struct {
 	What string `json:"what"`
 	// Server-issued message ID being reported
 	SeqId int `json:"seq,omitempty"`
+}
+
+// kai: MsgServerTxRes is the server-side reponse to client {tx} msg
+type MsgServerTxRes struct {
+	// type of the txres, could be one of "init, send"
+	What string `json:"what"`
+
+	// see MsgTxSent struct
+	// the tx hash if any
+	TxHash string `json:"txhash,omitempty"`
+	// the gas price
+	GasPrice int64 `json:"gasprice,omitempty"`
+	// nonce
+	Nonce uint64 `json:"nonce,omitempty"`
+	// the estimated gas amount
+	GasEstimated uint64 `json:"gasestimated,omitempty"`
+
+	// see MsgTxReceipt struct
+	// acutal used gas amount
+	GasUsed uint64 `json:"gasused,omitempty"`
+	// contract addr, if any
+	ConAddr string `json:"conaddr,omitempty"`
+	// if this tx is confirmed
+	Confirmed bool `json:"confirmed,omitempty"`
 }
 
 // kai: MsgServerConRes is the server-side response to the smart contract msg
