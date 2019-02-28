@@ -6,6 +6,8 @@ type MsgToChain struct {
 	User    string
 	Version string
 	ChainID int32
+	MessageID int64
+	SessionID string
 	Typ     string
 
 	SignedTx  *string
@@ -30,6 +32,8 @@ type MsgFromChain struct {
 	User    string
 	Version string
 	ChainID int32
+	MessageID int64
+	SessionID string
 	Typ     string
 
 	TxReceipt  *MsgTxReceipt
@@ -71,6 +75,8 @@ type TxPending struct {
 	User    string
 	Version string
 	ChainID int32
+	MessageID int64
+	SessionID string
 
 	TxHash string
 }
