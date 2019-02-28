@@ -16,11 +16,12 @@ type MsgFromVote struct {
 
 	Status *MsgVoteStatus
 	Param  *MsgVoteCurrentParam
-	Result bool
+	Result *MsgVoteResult
 }
 
 type MsgNewVote struct {
 	Proposal  *MsgVoteProposal
+
 	Duration  uint
 	PassRate  uint
 	VoterList []string
@@ -48,9 +49,15 @@ type MsgVoteCurrentParam struct {
 type MsgVoteProposal struct {
 	Typ  string
 	Data interface{}
+	ContractAddr *string
+	FuncName *string
+	Nonce	  int64
 }
 
 type MsgVoteResult struct {
 	Topic string
 	Value bool
+
+	Signature *string
+	Proposal  *MsgVoteProposal
 }

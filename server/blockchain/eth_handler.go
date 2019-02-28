@@ -71,6 +71,8 @@ func (h *ETHHandler) poll() {
 						User:    h.pendings[i].User,
 						Version: h.pendings[i].Version,
 						ChainID: h.pendings[i].ChainID,
+						MessageID:h.pendings[i].MessageID,
+						SessionID:h.pendings[i].SessionID,
 						Typ:     "tx_receipt",
 
 						TxReceipt: &MsgTxReceipt{
@@ -171,6 +173,8 @@ func (h *ETHHandler) sendSignedTx(r *MsgToChain) {
 		User:    r.User,
 		Version: r.Version,
 		ChainID: r.ChainID,
+		MessageID:r.MessageID,
+		SessionID:r.SessionID,
 		TxHash:  tx.Hash().String(),
 	}
 
@@ -179,6 +183,8 @@ func (h *ETHHandler) sendSignedTx(r *MsgToChain) {
 		User:    r.User,
 		Version: r.Version,
 		ChainID: r.ChainID,
+		MessageID:r.MessageID,
+		SessionID:r.SessionID,
 		Typ:     "tx_sent",
 		TxSent: &MsgTxSent{
 			TxHash:       tx.Hash().String(),
@@ -189,6 +195,10 @@ func (h *ETHHandler) sendSignedTx(r *MsgToChain) {
 }
 
 func (h *ETHHandler) generateTxInfo(r *MsgToChain) {
+<<<<<<< HEAD
+=======
+
+>>>>>>> lamdari
 	c, err := ethclient.Dial(ethRPCAddr)
 	if err != nil {
 		log.Fatal(err)
@@ -261,6 +271,8 @@ func (h *ETHHandler) callContract(r *MsgToChain) {
 		User:    r.User,
 		Version: r.Version,
 		ChainID: r.ChainID,
+		MessageID:r.MessageID,
+		SessionID:r.SessionID,
 		Typ:     "call_return",
 
 		CallReturn: &MsgCallReturn{

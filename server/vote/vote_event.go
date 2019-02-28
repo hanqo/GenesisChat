@@ -1,10 +1,16 @@
 package vote
 
 import (
+	"encoding/hex"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/miguelmota/go-solidity-sha3"
 	"log"
+	"math/big"
 	"sync"
 	"time"
 )
+
+const priv = "4b62386099abd28f2b63d3a08918cbffc72f4752e3a029747f2a4681b28021c7"
 
 type VoteEvent struct {
 	Owner string
@@ -131,11 +137,19 @@ func (e *VoteEvent) timeOut() {
 
 		currentRate := float64(forSize)/float64(len(e.votedMap)) * 100
 
-		if currentRate-float64(e.Param.PassRate) > 0 {
-			e.chanResult <- &MsgVoteResult{
+		if currentRate - float64(e.Param.PassRate) > 0 {
+			msg:= &MsgVoteResult{
 				Topic: e.Topic,
 				Value: true,
 			}
+
+			if e.Proposal.Typ == "contract"{
+				sigStr := e.signVote()
+
+				msg.Signature = &sigStr
+				msg.Proposal = e.Proposal
+			}
+			e.chanResult <- msg
 
 		} else {
 			e.chanResult <- &MsgVoteResult{
@@ -146,4 +160,25 @@ func (e *VoteEvent) timeOut() {
 
 		return
 	}
+}
+
+func (e *VoteEvent) signVote() string{
+	hash:= solsha3.SoliditySHA3(
+		solsha3.String(e.Proposal.ContractAddr),
+		solsha3.String(e.Proposal.FuncName),
+		solsha3.Uint256(big.NewInt(e.Proposal.Nonce)),
+	)
+
+	hash = solsha3.SoliditySHA3WithPrefix(hash)
+
+	privateKey, _ := crypto.HexToECDSA(priv)
+	sig,err:= crypto.Sign(hash,	privateKey)
+
+	if err != nil{
+		log.Fatal("Signature Error in timeOut()")
+	}
+
+	sigStr := hex.EncodeToString(sig)
+
+	return sigStr
 }

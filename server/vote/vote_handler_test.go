@@ -76,7 +76,7 @@ func TestVoteHandler1(t *testing.T){
 				}
 				return
 
-			}else if msg.Typ== "param"{
+			}else if msg.Typ== "parameter"{
 				param:= msg.Param
 
 				if param.PassRate!=33||param.Duration!= 10||param.VoterSize!= 5{

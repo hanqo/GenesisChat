@@ -51,7 +51,7 @@ func (v *VoteHandler) epoll() {
 				Owner:  e.Owner,
 				Topic:  e.Topic,
 				Typ:    "result",
-				Result: r.Value,
+				Result: r,
 			}
 
 			delete(v.pendings, r.Topic)
@@ -156,7 +156,6 @@ func (v *VoteHandler) getEventParam(msg *MsgToVote) bool {
 }
 
 func (v *VoteHandler) vote(msg *MsgToVote) bool {
-
 
 	v.mutex.Lock()
 	e, ok := v.pendings[msg.Topic]

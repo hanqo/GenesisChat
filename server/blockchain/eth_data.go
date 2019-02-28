@@ -6,6 +6,8 @@ type MsgToChain struct {
 	User    string
 	Version string
 	ChainID int32
+	MessageID string
+	SessionID string
 	Typ     string
 
 	SignedTx  *string
@@ -16,7 +18,7 @@ type MsgToChain struct {
 type MsgCall struct {
 	ContractAddr string
 	ContractFunc MsgContractFunc
-	Value        *int64
+	Value        *int64  //money want to pay during call
 }
 
 type MsgContractFunc struct {
@@ -30,6 +32,8 @@ type MsgFromChain struct {
 	User    string
 	Version string
 	ChainID int32
+	MessageID string
+	SessionID string
 	Typ     string
 
 	TxReceipt  *MsgTxReceipt
@@ -71,6 +75,8 @@ type TxPending struct {
 	User    string
 	Version string
 	ChainID int32
+	MessageID string
+	SessionID string
 
 	TxHash string
 }
