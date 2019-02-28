@@ -6,7 +6,7 @@ type MsgToChain struct {
 	User    string
 	Version string
 	ChainID int32
-	MessageID int64
+	MessageID string
 	SessionID string
 	Typ     string
 
@@ -32,7 +32,7 @@ type MsgFromChain struct {
 	User    string
 	Version string
 	ChainID int32
-	MessageID int64
+	MessageID string
 	SessionID string
 	Typ     string
 
@@ -75,7 +75,7 @@ type TxPending struct {
 	User    string
 	Version string
 	ChainID int32
-	MessageID int64
+	MessageID string
 	SessionID string
 
 	TxHash string
