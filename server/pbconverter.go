@@ -97,6 +97,26 @@ func pbServMetaSerialize(meta *MsgServerMeta) *pbx.ServerMsg_Meta {
 	}}
 }
 
+// kai: for consistency
+func pbServTxResSerialize(txres *MsgServerTxRes) *pbx.ServerMsg_TxRes {
+	return &pbx.ServerMsg_TxRes{TxRes: &pbx.ServerTxRes{
+		What: txres.What,
+		Type: txres.Type,
+		Id: txres.Id,
+		Topic: txres.Topic,
+		TxHash: txres.TxHash,
+		GasPrice: txres.GasPrice,
+		Nonce: txres.Nonce,
+		GasEstimated: txres.GasEstimated,
+		Data: txres.Data,
+		GasUsed: txres.GasUsed,
+		ConAddr: txres.ConAddr,
+		Fn: txres.Fn,
+		Output: txres.Output,
+		Confirmed: txres.Confirmed,
+	}}
+}
+
 // Convert ServerComMessage to pbx.ServerMsg
 func pbServSerialize(msg *ServerComMessage) *pbx.ServerMsg {
 	var pkt pbx.ServerMsg
@@ -112,6 +132,8 @@ func pbServSerialize(msg *ServerComMessage) *pbx.ServerMsg {
 		pkt.Message = pbServInfoSerialize(msg.Info)
 	case msg.Meta != nil:
 		pkt.Message = pbServMetaSerialize(msg.Meta)
+	case msg.TxRes != nil:
+		pkt.Message = pbServTxResSerialize(msg.TxRes)
 	}
 
 	pkt.Topic = msg.rcptto
@@ -190,6 +212,23 @@ func pbServDeserialize(pkt *pbx.ServerMsg) *ServerComMessage {
 			Desc:  pbTopicDescDeserialize(meta.GetDesc()),
 			Sub:   pbTopicSubSliceDeserialize(meta.GetSub()),
 			Del:   pbDelValuesDeserialize(meta.GetDel()),
+		}
+	} else if txres := pkt.GetTxRes(); txres != nil {
+		msg.TxRes = &MsgServerTxRes{
+			What: txres.GetWhat(),
+			Type: txres.GetType(),
+			Id: txres.GetId(),
+			Topic: txres.GetTopic(),
+			TxHash: txres.GetTxHash(),
+			GasPrice: txres.GetGasPrice(),
+			Nonce: txres.GetNonce(),
+			GasEstimated: txres.GetGasEstimated(),
+			Data: txres.GetData(),
+			GasUsed: txres.GetGasUsed(),
+			ConAddr: txres.GetConAddr(),
+			Fn: txres.GetFn(),
+			Output: txres.GetOutput(),
+			Confirmed: txres.GetConfirmed(),
 		}
 	}
 	return &msg
@@ -278,19 +317,18 @@ func pbCliSerialize(msg *ClientComMessage) *pbx.ClientMsg {
 	case msg.Tx != nil:
 		pkt.Message = &pbx.ClientMsg_Tx{Tx: &pbx.ClientTx{
 			What: msg.Tx.What,
+			Type: msg.Tx.Type,
+			Id: msg.Tx.Id,
+			Topic: msg.Tx.Topic,
 			User: msg.Tx.User,
 			PubAddr: msg.Tx.PubAddr,
 			Version: msg.Tx.Version,
-			ChainId: int32(msg.Tx.ChainId),
-			SignedTx: msg.Tx.SignedTx}}
-	case msg.Con != nil:
-		pkt.Message = &pbx.ClientMsg_Con{Con: &pbx.ClientCon{
-			What: msg.Con.What,
-			Tx: pbTxSerialize(msg.Con.Tx),
-			ConAddr: msg.Con.ConAddr,
-			Fn: msg.Con.Fn,
-			Inputs: msg.Con.Inputs,
-			Value: msg.Con.Value}}
+			ChainId: msg.Tx.ChainId,
+			SignedTx: msg.Tx.SignedTx,
+			ConAddr: msg.Tx.ConAddr,
+			Fn: msg.Tx.Fn,
+			Inputs: msg.Tx.Inputs,
+			Value: msg.Tx.Value}}
 	}
 
 	if pkt.Message == nil {
@@ -398,21 +436,19 @@ func pbCliDeserialize(pkt *pbx.ClientMsg) *ClientComMessage {
 	} else if tx := pkt.GetTx(); tx != nil {
 		msg.Tx = &MsgClientTx{
 			What: tx.GetWhat(),
+			Type: tx.GetType(),
+			Id: tx.GetId(),
+			Topic: tx.GetTopic(),
 			User: tx.GetUser(),
 			PubAddr: tx.GetPubAddr(),
 			Version: tx.GetVersion(),
 			ChainId: tx.GetChainId(),
 			SignedTx: tx.GetSignedTx(),
+			ConAddr: tx.GetConAddr(),
+			Fn: tx.GetFn(),
+			Inputs: tx.GetInputs(),
+			Value: tx.GetValue(),
 		}
-  } else if con := pkt.GetCon(); con != nil {
-    msg.Con = &MsgClientCon{
-        What: con.GetWhat(),
-        Tx: pbTxDeserialize(con.GetTx()),
-        ConAddr: con.GetConAddr(),
-        Fn: con.GetFn(),
-        Inputs: con.GetInputs(),
-        Value: con.GetValue(),
-    }
   }
 
 	msg.from = pkt.GetOnBehalfOf()
@@ -922,35 +958,4 @@ func pbCredentialsDeserialize(in []*pbx.Credential) []MsgAccCred {
 	}
 
 	return out
-}
-
-// kai
-func pbTxSerialize(in *MsgClientTx) *pbx.ClientTx {
-	if in == nil {
-		return nil
-	}
-
-	return &pbx.ClientTx{
-		What: in.What,
-		User: in.User,
-		PubAddr: in.PubAddr,
-		Version: in.Version,
-		ChainId: in.ChainId,
-		SignedTx: in.SignedTx,
-	}
-}
-
-func pbTxDeserialize(in *pbx.ClientTx) *MsgClientTx {
-	if in == nil {
-		return nil
-	}
-
-	return &MsgClientTx{
-		What: in.What,
-		User: in.User,
-		PubAddr: in.PubAddr,
-		Version: in.Version,
-		ChainId: in.ChainId,
-		SignedTx: in.SignedTx,
-	}
 }

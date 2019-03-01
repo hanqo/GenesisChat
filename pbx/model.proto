@@ -254,21 +254,18 @@ message ClientNote {
 // kai: ClientTx is a client-genreated msg to initiate or send tx
 message ClientTx {
 	string what = 1;
-	string user = 2;
-	string pub_addr = 3;
-	string version = 4;
-	int32 chain_id = 5;
-	string signed_tx = 6;
-}
-
-// Kai: ClientCon is a client-generated msg to interact with smart contracts
-message ClientCon {
-	string what = 1;
-	ClientTx tx = 2;
-	string con_addr = 3;
-	string fn = 4;
-	repeated string inputs = 5;
-	int64 value = 6;
+	string type = 2;
+	string id = 3;
+	string topic = 4;
+	string user = 5;
+	string pub_addr = 6;
+	string version = 7;
+	int32 chain_id = 8;
+	string signed_tx = 9;
+	string con_addr = 10;
+	string fn = 11;
+	repeated string inputs = 12;
+	int64 value = 13;
 }
 
 message ClientMsg {
@@ -284,7 +281,6 @@ message ClientMsg {
 		ClientDel del = 9;
 		ClientNote note = 10;
 		ClientTx tx = 11;
-		ClientCon con = 12;
 	}
 	// Root user may send messages on behalf of other users.
 	string on_behalf_of = 15;
@@ -417,6 +413,24 @@ message ServerInfo {
 	int32 seq_id = 4;
 }
 
+// {txres} message
+message ServerTxRes {
+	string what = 1;
+	string type = 2;
+	string id = 3;
+	string topic = 4;
+	string tx_hash = 5;
+	int64 gas_price = 6;
+	uint64 nonce = 7;
+	uint64 gas_estimated = 8;
+	bytes data = 9;
+	uint64 gas_used = 10;
+	string con_addr = 11;
+	string fn = 12;
+	string output = 13;
+	bool confirmed = 14;
+}
+
 // Cumulative message
 message ServerMsg {
 	oneof Message {
@@ -425,9 +439,10 @@ message ServerMsg {
 		ServerPres pres = 3;
 		ServerMeta meta = 4;
 		ServerInfo info = 5;
+		ServerTxRes tx_res = 6;
 	}
 	// When response is sent to Root, send internal topic name too.
-	string topic = 6;
+	string topic = 10;
 }
 
 // Plugin response codes

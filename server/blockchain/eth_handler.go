@@ -195,10 +195,6 @@ func (h *ETHHandler) sendSignedTx(r *MsgToChain) {
 }
 
 func (h *ETHHandler) generateTxInfo(r *MsgToChain) {
-<<<<<<< HEAD
-=======
-
->>>>>>> lamdari
 	c, err := ethclient.Dial(ethRPCAddr)
 	if err != nil {
 		log.Fatal(err)

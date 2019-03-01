@@ -101,11 +101,8 @@ type Topic struct {
   // Flag which tells topic to stop acception requests: hub is in the process of shutting it down
   suspended atomicBool
 
-	// kai: extra fields, only available in group topics
-	// todo these needs to be saved in DB?
-	// public address of wallet
-	addr string
-	// address of smart contract (if deployed)
+	// kai: address of smart contract (if deployed)
+	// todo needs to be saved in DB
 	conAddr string
 }
 

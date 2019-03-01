@@ -165,21 +165,38 @@ type MsgClientSub struct {
 // kai: tx related typedefs
 
 // MsgClientTx is a {tx} message which represents client operation to a tx
-// it should be applied to the generic tx, not only contract tx.
-// the flow should be like this:
-// 1. client initiates a tx with sending: 
+// depening on |what|, we either:
+// - initiate a tx (where we request to create a tx), or
+// - sends out a tx with signed bytes
+// |type| specifies if it's a plain tx, or contract related (deploy, getter, setter)
+
+// workflows for 'plain', 'depcon', 'setcon':
+// 1. client initiates a tx with:
 //			tx: { what: "init"  ... }
 // 2. server replies with necessary infos to create a tx, e.g. gas price, nonce etc
 //			txres: { what: "init" ... } 
-// 3. client sends the actual tx with sending: 
+// 3. client creates a tx, signs it, and sends it with:
 //			tx: { what: "send" ... }
 // 4. server replies with txres to indicate tx is received
 //			txres: { what: "send" , confirmed: false, ...}
 // 5. server replies with txres to indicate tx is confirmed (on the chain)
 //			txres: { what: "send", confirmed: true, ...}
+
+// for 'getcon', there's no real tx needed, it's just a getter call
+// workflows:
+// 1. client sends a tx with:
+//			tx: { what: "send", type: "getcon"... }
+// 2. server replies with the result of the get call:
+//			txres: { what: "send", type: "getcon", ouput: ...}
 type MsgClientTx struct {
 	// one of these: init, send
 	What string `json:"what"`
+  // one of these: plain, depcon, getcon, setcon
+	Type string `json:"type"`
+
+	// general meta data, UI has to utilize this to 'remember' the motivation of the tx
+	Id    string `json:"id,omitempty"`
+	Topic string `json:"topic,omitempty"`
 
   // User that initiates the action
 	User string `json:"user"`
@@ -191,18 +208,8 @@ type MsgClientTx struct {
 	ChainId int32 `json:"chainid,omitempty"`
 	// singed tx , required when what == send
 	SignedTx string `json:"signedtx,omitempty"`
-}
 
-// kai: smart contract related typedefs
-
-// MsgClientCon is a {con} message which represents client operation to smart contract
-// not defining extra structs like MsgConDeploy MsgConGet MsgConSet to reduce levels
-type MsgClientCon struct {
-  // what to do, one of these: deploy, get, set
-  What string `json:"what"`
-
-  // the matched tx, required for |deploy| and |set|
-  Tx *MsgClientTx `json:"tx,omitempty"`
+	// the following only valid for contract tx
   // the address of the contract, ignored for |deploy|
   ConAddr string `json:"conaddr,omitempty"`
   // function name, ignored for |deploy| (ctor is expected)
@@ -336,7 +343,6 @@ type ClientComMessage struct {
 	Del   *MsgClientDel   `json:"del"`
 	Note  *MsgClientNote  `json:"note"`
 	Tx    *MsgClientTx    `json:"tx"`
-	Con   *MsgClientCon   `json:"con"`
 
 	// Message ID denormalized
 	id string
@@ -540,9 +546,15 @@ type MsgServerInfo struct {
 }
 
 // kai: MsgServerTxRes is the server-side reponse to client {tx} msg
+//      see the workflows for the MsgClientTx
 type MsgServerTxRes struct {
-	// type of the txres, could be one of "init, send"
+	// one of "init, send"
 	What string `json:"what"`
+	// one of "plain", "depcon", "getcon", "setcon"
+	Type string `json:"type"`
+
+	Id    string `json:"id,omitempty"`
+	Topic string `json:"topic,omitempty"`
 
 	// see MsgTxSent struct
 	// the tx hash if any
@@ -553,35 +565,23 @@ type MsgServerTxRes struct {
 	Nonce uint64 `json:"nonce,omitempty"`
 	// the estimated gas amount
 	GasEstimated uint64 `json:"gasestimated,omitempty"`
+  // data from binded contract, only valid for 'depcon' and 'setcon'
+	Data []byte `json:"data,omitempty"`
 
 	// see MsgTxReceipt struct
 	// acutal used gas amount
 	GasUsed uint64 `json:"gasused,omitempty"`
-	// if this tx is confirmed
-	Confirmed bool `json:"confirmed,omitempty"`
-}
-
-// kai: MsgServerConRes is the server-side response to the smart contract msg
-type MsgServerConRes struct {
-	// type of the conres, could be one of "deploy, get, set"
-	What string `json:"what"`
-
-	// corresponding topic
-	Topic string `json:"topic"`
-	// txres, for |deploy| and |set|
-	TxRes *MsgServerTxRes `json:"txres,omitempty"`
-  // data from binded contract, only valid for |deploy| and |set|
-	Data []byte `json:"data,omitempty"`
-	// contract addr, especially for |deploy|
+	// contract address, if any
 	ConAddr string `json:"conaddr,omitempty"`
 
-	// the following is valid when querying a contract (get)
-
-	// see MsgCallReturn struct
+	// only valid for 'getcon', see MsgCallReturn struct
 	// the function name that is queried
 	Fn string `json:"fn,omitempty"`
 	// the output
 	Output string `json:"output,omitempty"`
+
+	// if this tx is confirmed
+	Confirmed bool `json:"confirmed,omitempty"`
 }
 
 // ServerComMessage is a wrapper for server-side messages.
@@ -591,8 +591,7 @@ type ServerComMessage struct {
 	Meta *MsgServerMeta `json:"meta,omitempty"`
 	Pres *MsgServerPres `json:"pres,omitempty"`
 	Info *MsgServerInfo `json:"info,omitempty"`
-	TxRes  *MsgServerTxRes  `json:"txres, omitempty"`
-	ConRes *MsgServerConRes `json:"conres,omitempty"`
+	TxRes *MsgServerTxRes `json:"txres,omitempty"`
 
 	// MsgServerData has no Id field, copying it here for use in {ctrl} aknowledgements
 	id string
