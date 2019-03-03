@@ -176,39 +176,39 @@ type MsgClientSub struct {
 
 // Note: directly sending {tx} is supported only either when type = 'plain', or what = 'init'
 //       for those usecases where sending tx should lead to an action (e.g. leave or join groups)
-//			 please use the action message directly with the {tx} message included. (see step 3 below)
+//       please use the action message directly with the {tx} message included. (see step 3 below)
 
 // workflows for 'plain', 'depcon', 'setcon':
 // 1. client initiates a tx with:
-//			tx: { what: "init"  ... }
+//     tx: { what: "init"  ... }
 // 2. server replies with necessary infos to create a tx, e.g. gas price, nonce etc
-//			txres: { what: "init" ... } 
+//     txres: { what: "init" ... } 
 // 3. client creates a tx, signs it, and sends it with:
-//		either tx: { what: "send" ... } , if plain tx is meant to be sent
-//		or     leave: { id: .. , tx : { what: "send", type: "setcon" ...}}, if
-//		       an action is meant to be performed if the tx is confirmed(leave the group in this example)
+//    either tx: { what: "send" ... } , if plain tx is meant to be sent
+//    or     leave: { id: .. , tx : { what: "send", type: "setcon" ...}}, if
+//           an action is meant to be performed if the tx is confirmed(leave the group in this example)
 // 4. server replies with txres to indicate tx is received
-//			txres: { what: "send" , confirmed: false, ...}
+//     txres: { what: "send" , confirmed: false, ...}
 // 5. server replies with txres to indicate tx is confirmed (on the chain)
-//			txres: { what: "send", confirmed: true, ...}
+//     txres: { what: "send", confirmed: true, ...}
 
 // for 'getcon', there's no real tx needed, it's just a getter call
 // workflows:
 // 1. client sends a tx with:
-//			tx: { what: "send", type: "getcon"... }
+//     tx: { what: "send", type: "getcon"... }
 // 2. server replies with the result of the get call:
-//			txres: { what: "send", type: "getcon", ouput: ...}
+//     txres: { what: "send", type: "getcon", ouput: ...}
 type MsgClientTx struct {
 	// one of these: init, send
 	What string `json:"what"`
-  // one of these: plain, depcon, getcon, setcon
+	// one of these: plain, depcon, getcon, setcon
 	Type string `json:"type"`
 
 	// general meta data, UI has to utilize this to 'remember' the motivation of the tx
 	Id    string `json:"id,omitempty"`
 	Topic string `json:"topic,omitempty"`
 
-  // User that initiates the action
+	// User that initiates the action
 	User string `json:"user"`
 	// the public address
 	PubAddr string `json:"pubaddr"`
@@ -220,14 +220,14 @@ type MsgClientTx struct {
 	SignedTx string `json:"signedtx,omitempty"`
 
 	// the following only valid for contract tx
-  // the address of the contract, ignored for |deploy|
-  ConAddr string `json:"conaddr,omitempty"`
-  // function name, ignored for |deploy| (ctor is expected)
-  Fn string `json:"fn,omitempty"`
-  // args to the functions
-  Inputs []string `json:"inputs,omitempty"`
-  // value, optional for |get|, see MsgCall struct
-  Value int64 `json:"value,omitempty"`
+	// the address of the contract, ignored for |deploy|
+	ConAddr string `json:"conaddr,omitempty"`
+	// function name, ignored for |deploy| (ctor is expected)
+	Fn string `json:"fn,omitempty"`
+	// args to the functions
+	Inputs []string `json:"inputs,omitempty"`
+	// value, optional for |get|, see MsgCall struct
+	Value int64 `json:"value,omitempty"`
 }
 
 const (
@@ -292,7 +292,7 @@ type MsgClientLeave struct {
 	Unsub bool   `json:"unsub,omitempty"`
 
 	// kai: optional {tx} message
-	//			used to set contract when the user unsubs group topic
+	//      used to set contract when the user unsubs group topic
 	Tx *MsgClientTx `json"tx,omitempty"`
 }
 
