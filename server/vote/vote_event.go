@@ -24,7 +24,7 @@ type VoteEvent struct {
 	votedMap map[string]bool
 
 	chanResult chan *MsgVoteResult
-	mutex    sync.Mutex
+	mutex      sync.Mutex
 }
 
 func NewVoteEvent(
@@ -43,7 +43,6 @@ func NewVoteEvent(
 	expiresTime := nowTime.Add(durationTime)
 	expiresStr := expiresTime.Format(time.RFC850)
 
-
 	votedMap := make(map[string]bool)
 
 	for _, v := range voterList {
@@ -55,7 +54,7 @@ func NewVoteEvent(
 		Owner:      owner,
 		Topic:      topic,
 		ticker:     time.NewTicker(durationTime),
-		votedMap:	votedMap,
+		votedMap:   votedMap,
 		chanResult: chanResult,
 
 		Proposal: proposal,
@@ -108,20 +107,20 @@ func (e *VoteEvent) Vote(voter string, value uint) bool {
 func (e *VoteEvent) GetStatus(voter string) (*MsgVoteStatus, bool) {
 	_, ok := e.votedMap[voter]
 
-	if ok != true  {
+	if ok != true {
 		log.Fatal("Only candidates can access status")
 		return nil, false
 	}
 
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
-	return e.Status,true
+	return e.Status, true
 }
 
-func (e *VoteEvent) GetParam(voter string) (*MsgVoteCurrentParam,bool) {
+func (e *VoteEvent) GetParam(voter string) (*MsgVoteCurrentParam, bool) {
 	_, ok := e.votedMap[voter]
 
-	if ok != true  {
+	if ok != true {
 		log.Fatal("Only candidates can access parameter")
 		return nil, false
 	}
@@ -135,15 +134,15 @@ func (e *VoteEvent) timeOut() {
 		forSize := len(e.Status.ForList)
 		e.mutex.Unlock()
 
-		currentRate := float64(forSize)/float64(len(e.votedMap)) * 100
+		currentRate := float64(forSize) / float64(len(e.votedMap)) * 100
 
-		if currentRate - float64(e.Param.PassRate) > 0 {
-			msg:= &MsgVoteResult{
+		if currentRate-float64(e.Param.PassRate) > 0 {
+			msg := &MsgVoteResult{
 				Topic: e.Topic,
 				Value: true,
 			}
 
-			if e.Proposal.Typ == "contract"{
+			if e.Proposal.Typ == "contract" {
 				sigStr := e.signVote()
 
 				msg.Signature = &sigStr
@@ -162,8 +161,8 @@ func (e *VoteEvent) timeOut() {
 	}
 }
 
-func (e *VoteEvent) signVote() string{
-	hash:= solsha3.SoliditySHA3(
+func (e *VoteEvent) signVote() string {
+	hash := solsha3.SoliditySHA3(
 		solsha3.String(e.Proposal.ContractAddr),
 		solsha3.String(e.Proposal.FuncName),
 		solsha3.Uint256(big.NewInt(e.Proposal.Nonce)),
@@ -172,9 +171,9 @@ func (e *VoteEvent) signVote() string{
 	hash = solsha3.SoliditySHA3WithPrefix(hash)
 
 	privateKey, _ := crypto.HexToECDSA(priv)
-	sig,err:= crypto.Sign(hash,	privateKey)
+	sig, err := crypto.Sign(hash, privateKey)
 
-	if err != nil{
+	if err != nil {
 		log.Fatal("Signature Error in timeOut()")
 	}
 

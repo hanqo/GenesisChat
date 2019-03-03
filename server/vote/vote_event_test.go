@@ -39,7 +39,7 @@ func TestVoteEvent(t *testing.T) {
 	event.Vote("voter8", 2)
 	time.Sleep(time.Second * 1)
 
-	param,_ := event.GetParam("voter1")
+	param, _ := event.GetParam("voter1")
 
 	if param.PassRate != 33 {
 		t.Error("Passrate is not as expected")
@@ -49,7 +49,7 @@ func TestVoteEvent(t *testing.T) {
 		t.Error("Duration is not as expected")
 	}
 
-	status,_ := event.GetStatus("voter1")
+	status, _ := event.GetStatus("voter1")
 
 	if len(status.ForList) != 5 ||
 		len(status.AgainstList) != 2 ||

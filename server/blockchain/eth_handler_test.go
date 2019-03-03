@@ -13,9 +13,10 @@ import (
 	"math/big"
 	"testing"
 )
+
 const addr = "0xb04b61254B42d64f17938E5DCe2eb728cAfF8937"
 
-func generateRawTxNaive() string{
+func generateRawTxNaive() string {
 
 	client, err := ethclient.Dial("http://127.0.0.1:7545") //Ganache local address
 	if err != nil {
@@ -52,11 +53,11 @@ func generateRawTxNaive() string{
 	rawTxBytes := ts.GetRlp(0)
 	rawTxHex := hex.EncodeToString(rawTxBytes)
 
-	fmt.Printf("raw tx hex: %s\n",rawTxHex)
+	fmt.Printf("raw tx hex: %s\n", rawTxHex)
 	return rawTxHex
 }
 
-func generateRawTxDeployContract(gas uint64, gasPrice int64, nonce uint64, data []byte) string{
+func generateRawTxDeployContract(gas uint64, gasPrice int64, nonce uint64, data []byte) string {
 
 	privateStr := "4b62386099abd28f2b63d3a08918cbffc72f4752e3a029747f2a4681b28021c7"
 
@@ -74,11 +75,11 @@ func generateRawTxDeployContract(gas uint64, gasPrice int64, nonce uint64, data 
 	rawTxBytes := ts.GetRlp(0)
 	rawTxHex := hex.EncodeToString(rawTxBytes)
 
-	fmt.Printf("raw tx 2 hex: %s\n",rawTxHex)
+	fmt.Printf("raw tx 2 hex: %s\n", rawTxHex)
 	return rawTxHex
 }
 
-func generateRawTxSetContract(gas uint64, gasPrice int64, nonce uint64, data []byte) string{
+func generateRawTxSetContract(gas uint64, gasPrice int64, nonce uint64, data []byte) string {
 	contractAddr := "0xD083B809Ee1531aA40bb94cbb1F134913aC9d5eE"
 	recipientAddr := common.HexToAddress(contractAddr)
 
@@ -98,7 +99,7 @@ func generateRawTxSetContract(gas uint64, gasPrice int64, nonce uint64, data []b
 	rawTxBytes := ts.GetRlp(0)
 	rawTxHex := hex.EncodeToString(rawTxBytes)
 
-	fmt.Printf("raw tx 2 hex: %s\n",rawTxHex)
+	fmt.Printf("raw tx 2 hex: %s\n", rawTxHex)
 	return rawTxHex
 }
 
@@ -106,7 +107,7 @@ func generateRawTxSetContract(gas uint64, gasPrice int64, nonce uint64, data []b
 func TestSendSignedTx(t *testing.T) {
 	//----------------------Test naive transaction and polling--------------------------------------------------------//
 	h := NewETHHandler()
-	rawTxData1 :=generateRawTxNaive()
+	rawTxData1 := generateRawTxNaive()
 
 	h.ToChains <- &MsgToChain{
 		From:     addr,
@@ -114,7 +115,7 @@ func TestSendSignedTx(t *testing.T) {
 		Version:  "1",
 		ChainID:  123,
 		Typ:      "signed_tx",
-		SignedTx: &rawTxData1,}
+		SignedTx: &rawTxData1}
 	for {
 		select {
 		case msg := <-h.FromChains:
@@ -136,18 +137,18 @@ func TestSendSignedTx(t *testing.T) {
 
 func TestDeployContract(t *testing.T) {
 	h := NewETHHandler()
-	m:= &MsgToChain{
+	m := &MsgToChain{
 		From:    addr,
 		User:    "test1",
 		Version: "1",
 		ChainID: 123,
 		Typ:     "request_tx",
-		RequestTx:  	&MsgContractFunc{
+		RequestTx: &MsgContractFunc{
 			Function: "",
-			Inputs:   []string{"kingdom","xrisheng","100","1200"},},}
+			Inputs:   []string{"kingdom", "xrisheng", "100", "1200"}}}
 
 	h.ToChains <- m
-	for{
+	for {
 		select {
 		case msg := <-h.FromChains:
 			if msg.TxSent != nil {
@@ -155,20 +156,20 @@ func TestDeployContract(t *testing.T) {
 				fmt.Printf("deploy tx Sent with gas price: %d\n", msg.TxSent.GasPrice)
 				fmt.Printf("deploy tx Sent with Nonce: %d\n", msg.TxSent.Nonce)
 				fmt.Printf("deploy tx Sent with estimated gas: %d\n", msg.TxSent.GasEstimated)
-			}else if msg.TxInfo != nil{
+			} else if msg.TxInfo != nil {
 				if msg.TxInfo.Function != m.RequestTx.Function {
 					t.Error("Function name not equal")
 				}
-				if msg.TxInfo.GasPrice <= 0{
+				if msg.TxInfo.GasPrice <= 0 {
 					t.Error("gas price not greater than 0")
 				}
-				if msg.TxInfo.Nonce <= 0{
+				if msg.TxInfo.Nonce <= 0 {
 					t.Error("Nonce not greater than 0")
 				}
-				if msg.TxInfo.Data == nil{
+				if msg.TxInfo.Data == nil {
 					t.Error("Data field is nil")
 				}
-				rawTxData2 := generateRawTxDeployContract(5000000,msg.TxInfo.GasPrice,msg.TxInfo.Nonce,msg.TxInfo.Data)
+				rawTxData2 := generateRawTxDeployContract(5000000, msg.TxInfo.GasPrice, msg.TxInfo.Nonce, msg.TxInfo.Data)
 
 				h.ToChains <- &MsgToChain{
 					From:     addr,
@@ -176,10 +177,10 @@ func TestDeployContract(t *testing.T) {
 					Version:  "1",
 					ChainID:  123,
 					Typ:      "signed_tx",
-					SignedTx: &rawTxData2,}
+					SignedTx: &rawTxData2}
 
-			} else if msg.TxReceipt != nil{
-				if msg.TxReceipt.ContractAddr == nil{
+			} else if msg.TxReceipt != nil {
+				if msg.TxReceipt.ContractAddr == nil {
 					t.Error("Contract Address is nil, deploy failed")
 				}
 				fmt.Printf("deploy tx Confirmed with hash: %s\n", msg.TxReceipt.TxHash)
@@ -201,7 +202,7 @@ func TestSetContract(t *testing.T) {
 		Typ:     "request_tx",
 		RequestTx: &MsgContractFunc{
 			Function: "setEntryCost",
-			Inputs:   []string{"500"},},}
+			Inputs:   []string{"500"}}}
 
 	h.ToChains <- m
 	for {
@@ -221,8 +222,8 @@ func TestSetContract(t *testing.T) {
 					Version:  "1",
 					ChainID:  123,
 					Typ:      "signed_tx",
-					SignedTx: &rawTxData3,}
-			}else if msg.TxReceipt != nil{
+					SignedTx: &rawTxData3}
+			} else if msg.TxReceipt != nil {
 				fmt.Printf("set tx Confirmed with hash: %s\n", msg.TxReceipt.TxHash)
 				fmt.Printf("set tx Confirmed with gas used: %d\n", msg.TxReceipt.GasUsed)
 				return
@@ -244,8 +245,8 @@ func TestCallContract(t *testing.T) {
 		Call: &MsgCall{
 			ContractAddr: "0xD083B809Ee1531aA40bb94cbb1F134913aC9d5eE",
 			ContractFunc: MsgContractFunc{
-				Function: "getEntryCost",},
-		},}
+				Function: "getEntryCost"},
+		}}
 
 	h.ToChains <- m
 	for {

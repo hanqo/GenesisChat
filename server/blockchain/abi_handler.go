@@ -32,7 +32,7 @@ func NewABIHandler() *ABIHandler {
 	return h
 }
 
-func (h *ABIHandler) packContractFunc(name string, inputs []string) [] byte {
+func (h *ABIHandler) packContractFunc(name string, inputs []string) []byte {
 
 	var res []byte
 	var err error
@@ -160,7 +160,7 @@ func (h *ABIHandler) unpackContractFunc(data []byte, name string) (string, error
 			name    string
 			balance *big.Int
 		}
-		var tmp [] citizen
+		var tmp []citizen
 		err = h.abiObject.Unpack(&tmp, name, data)
 		if err != nil {
 			log.Fatal("input string not valid in contract getCitizen")

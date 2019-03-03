@@ -100,22 +100,22 @@ func pbServMetaSerialize(meta *MsgServerMeta) *pbx.ServerMsg_Meta {
 // kai: for consistency
 func pbServTxResSerialize(txres *MsgServerTxRes) *pbx.ServerMsg_TxRes {
 	return &pbx.ServerMsg_TxRes{TxRes: &pbx.ServerTxRes{
-		What: txres.What,
-		Type: txres.Type,
-		Id: txres.Id,
-		Topic: txres.Topic,
-		User: txres.User,
-		To: txres.To,
-		TxHash: txres.TxHash,
-		GasPrice: txres.GasPrice,
-		Nonce: txres.Nonce,
+		What:         txres.What,
+		Type:         txres.Type,
+		Id:           txres.Id,
+		Topic:        txres.Topic,
+		User:         txres.User,
+		To:           txres.To,
+		TxHash:       txres.TxHash,
+		GasPrice:     txres.GasPrice,
+		Nonce:        txres.Nonce,
 		GasEstimated: txres.GasEstimated,
-		Data: txres.Data,
-		GasUsed: txres.GasUsed,
-		ConAddr: txres.ConAddr,
-		Fn: txres.Fn,
-		Output: txres.Output,
-		Confirmed: txres.Confirmed,
+		Data:         txres.Data,
+		GasUsed:      txres.GasUsed,
+		ConAddr:      txres.ConAddr,
+		Fn:           txres.Fn,
+		Output:       txres.Output,
+		Confirmed:    txres.Confirmed,
 	}}
 }
 
@@ -217,22 +217,22 @@ func pbServDeserialize(pkt *pbx.ServerMsg) *ServerComMessage {
 		}
 	} else if txres := pkt.GetTxRes(); txres != nil {
 		msg.TxRes = &MsgServerTxRes{
-			What: txres.GetWhat(),
-			Type: txres.GetType(),
-			Id: txres.GetId(),
-			Topic: txres.GetTopic(),
-			User: txres.GetUser(),
-			To: txres.GetTo(),
-			TxHash: txres.GetTxHash(),
-			GasPrice: txres.GetGasPrice(),
-			Nonce: txres.GetNonce(),
+			What:         txres.GetWhat(),
+			Type:         txres.GetType(),
+			Id:           txres.GetId(),
+			Topic:        txres.GetTopic(),
+			User:         txres.GetUser(),
+			To:           txres.GetTo(),
+			TxHash:       txres.GetTxHash(),
+			GasPrice:     txres.GetGasPrice(),
+			Nonce:        txres.GetNonce(),
 			GasEstimated: txres.GetGasEstimated(),
-			Data: txres.GetData(),
-			GasUsed: txres.GetGasUsed(),
-			ConAddr: txres.GetConAddr(),
-			Fn: txres.GetFn(),
-			Output: txres.GetOutput(),
-			Confirmed: txres.GetConfirmed(),
+			Data:         txres.GetData(),
+			GasUsed:      txres.GetGasUsed(),
+			ConAddr:      txres.GetConAddr(),
+			Fn:           txres.GetFn(),
+			Output:       txres.GetOutput(),
+			Confirmed:    txres.GetConfirmed(),
 		}
 	}
 	return &msg
@@ -274,13 +274,13 @@ func pbCliSerialize(msg *ClientComMessage) *pbx.ClientMsg {
 			Topic:    msg.Sub.Topic,
 			SetQuery: pbSetQuerySerialize(msg.Sub.Set),
 			GetQuery: pbGetQuerySerialize(msg.Sub.Get),
-			Tx: pbTxSerialize(msg.Sub.Tx)}}
+			Tx:       pbTxSerialize(msg.Sub.Tx)}}
 	case msg.Leave != nil:
 		pkt.Message = &pbx.ClientMsg_Leave{Leave: &pbx.ClientLeave{
 			Id:    msg.Leave.Id,
 			Topic: msg.Leave.Topic,
 			Unsub: msg.Leave.Unsub,
-			Tx: pbTxSerialize(msg.Leave.Tx)}}
+			Tx:    pbTxSerialize(msg.Leave.Tx)}}
 	case msg.Pub != nil:
 		pkt.Message = &pbx.ClientMsg_Pub{Pub: &pbx.ClientPub{
 			Id:      msg.Pub.Id,
@@ -370,14 +370,14 @@ func pbCliDeserialize(pkt *pbx.ClientMsg) *ClientComMessage {
 			Topic: sub.GetTopic(),
 			Get:   pbGetQueryDeserialize(sub.GetGetQuery()),
 			Set:   pbSetQueryDeserialize(sub.GetSetQuery()),
-			Tx: pbTxDeserialize(sub.GetTx()),
+			Tx:    pbTxDeserialize(sub.GetTx()),
 		}
 	} else if leave := pkt.GetLeave(); leave != nil {
 		msg.Leave = &MsgClientLeave{
 			Id:    leave.GetId(),
 			Topic: leave.GetTopic(),
 			Unsub: leave.GetUnsub(),
-			Tx: pbTxDeserialize(leave.GetTx()),
+			Tx:    pbTxDeserialize(leave.GetTx()),
 		}
 	} else if pub := pkt.GetPub(); pub != nil {
 		msg.Pub = &MsgClientPub{
@@ -430,7 +430,7 @@ func pbCliDeserialize(pkt *pbx.ClientMsg) *ClientComMessage {
 		}
 	} else if tx := pkt.GetTx(); tx != nil {
 		msg.Tx = pbTxDeserialize(tx)
-  }
+	}
 
 	msg.from = pkt.GetOnBehalfOf()
 	msg.authLvl = int(pkt.GetAuthLevel())
@@ -948,42 +948,41 @@ func pbTxSerialize(in *MsgClientTx) *pbx.ClientTx {
 		return nil
 	}
 
-	return &pbx.ClientTx {
-		What: in.What,
-		Type: in.Type,
-		Id: in.Id,
-		Topic: in.Topic,
-		User: in.User,
-		PubAddr: in.PubAddr,
-		Version: in.Version,
-		ChainId: in.ChainId,
+	return &pbx.ClientTx{
+		What:     in.What,
+		Type:     in.Type,
+		Id:       in.Id,
+		Topic:    in.Topic,
+		User:     in.User,
+		PubAddr:  in.PubAddr,
+		Version:  in.Version,
+		ChainId:  in.ChainId,
 		SignedTx: in.SignedTx,
-		ConAddr: in.ConAddr,
-		Fn: in.Fn,
-		Inputs: in.Inputs,
-		Value: in.Value,
+		ConAddr:  in.ConAddr,
+		Fn:       in.Fn,
+		Inputs:   in.Inputs,
+		Value:    in.Value,
 	}
 }
-
 
 func pbTxDeserialize(in *pbx.ClientTx) *MsgClientTx {
 	if in == nil {
 		return nil
 	}
 
-	return &MsgClientTx {
-		What: in.GetWhat(),
-		Type: in.GetType(),
-		Id: in.GetId(),
-		Topic: in.GetTopic(),
-		User: in.GetUser(),
-		PubAddr: in.GetPubAddr(),
-		Version: in.GetVersion(),
-		ChainId: in.GetChainId(),
+	return &MsgClientTx{
+		What:     in.GetWhat(),
+		Type:     in.GetType(),
+		Id:       in.GetId(),
+		Topic:    in.GetTopic(),
+		User:     in.GetUser(),
+		PubAddr:  in.GetPubAddr(),
+		Version:  in.GetVersion(),
+		ChainId:  in.GetChainId(),
 		SignedTx: in.GetSignedTx(),
-		ConAddr: in.GetConAddr(),
-		Fn: in.GetFn(),
-		Inputs: in.GetInputs(),
-		Value: in.GetValue(),
+		ConAddr:  in.GetConAddr(),
+		Fn:       in.GetFn(),
+		Inputs:   in.GetInputs(),
+		Value:    in.GetValue(),
 	}
 }

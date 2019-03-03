@@ -12,12 +12,12 @@ package main
 import (
 	"container/list"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
-	"errors"
 
 	"github.com/gorilla/websocket"
 	"github.com/tinode/chat/pbx"
@@ -1187,7 +1187,7 @@ func (s *Session) note(msg *ClientComMessage) {
 
 // kai: the tx message from client
 func (s *Session) tx(msg *ClientComMessage) {
-	
+
 	if msg.topic == "" {
 		log.Println("we get a tx msg but topic name is empty")
 		return
@@ -1275,9 +1275,9 @@ func createTxResMsg(m *bc.MsgFromChain, t, id, topic string, ts time.Time) (*Ser
 	var r *ServerComMessage
 	r.id = id
 	r.timestamp = ts
-	r.TxRes = &MsgServerTxRes {
-		Type: t,
-		Id: id,
+	r.TxRes = &MsgServerTxRes{
+		Type:  t,
+		Id:    id,
 		Topic: topic,
 	}
 
@@ -1304,7 +1304,7 @@ func createTxResMsg(m *bc.MsgFromChain, t, id, topic string, ts time.Time) (*Ser
 		r.TxRes.GasEstimated = m.TxSent.GasEstimated
 		r.TxRes.Confirmed = false
 	} else if m.TxReceipt != nil { // tx is confirmed
-		if (t == "depcon") {
+		if t == "depcon" {
 			if m.TxReceipt.ContractAddr == nil {
 				log.Println("nil contract addr")
 				return ErrInvalidContractAddr(id, topic, ts), errors.New("nil contract addr")
@@ -1317,7 +1317,7 @@ func createTxResMsg(m *bc.MsgFromChain, t, id, topic string, ts time.Time) (*Ser
 		r.TxRes.GasUsed = m.TxReceipt.GasUsed
 		r.TxRes.Confirmed = true
 	} else if m.CallReturn != nil { // the query of contract has a result
-		if (t != "getcon") {
+		if t != "getcon" {
 			log.Println("malformed type, we expect a getcon")
 			return ErrInvalidTxType(id, topic, ts, "getcon"), errors.New("we expect a getcon")
 		}
@@ -1333,8 +1333,8 @@ func createTxResMsg(m *bc.MsgFromChain, t, id, topic string, ts time.Time) (*Ser
 
 func closeHandler(h *bc.ETHHandler) {
 	log.Println("closing eth handler now...")
-	h.RunDone  <-true
-	h.PollDone <-true
+	h.RunDone <- true
+	h.PollDone <- true
 }
 
 // kai: helper func to handle the tx
@@ -1356,10 +1356,10 @@ func handleTx(s *Session, tx *MsgClientTx, id, topic string, ts time.Time) error
 	defer closeHandler(h)
 
 	mtc := &bc.MsgToChain{
-		From: tx.PubAddr,
-		User: tx.User,
-		Version: tx.Version,
-		ChainID: tx.ChainId,
+		From:      tx.PubAddr,
+		User:      tx.User,
+		Version:   tx.Version,
+		ChainID:   tx.ChainId,
 		MessageID: tx.Id,
 		SessionID: s.sid,
 	}
@@ -1368,7 +1368,7 @@ func handleTx(s *Session, tx *MsgClientTx, id, topic string, ts time.Time) error
 		if tx.Type == "depcon" || tx.Type == "setcon" {
 			mtc.RequestTx = &bc.MsgContractFunc{
 				Function: tx.Fn,
-				Inputs: tx.Inputs,
+				Inputs:   tx.Inputs,
 			}
 		}
 	} else if tx.What == "send" {
@@ -1382,7 +1382,7 @@ func handleTx(s *Session, tx *MsgClientTx, id, topic string, ts time.Time) error
 				ContractAddr: tx.ConAddr,
 				ContractFunc: bc.MsgContractFunc{
 					Function: tx.Fn,
-					Inputs: tx.Inputs,},
+					Inputs:   tx.Inputs},
 				Value: &tx.Value,
 			}
 		} else {
@@ -1440,4 +1440,3 @@ func conLeave(s *Session, msg *ClientComMessage, subName string) {
 		unsub:  msg.Leave.Unsub,
 		reqID:  msg.id}
 }
-

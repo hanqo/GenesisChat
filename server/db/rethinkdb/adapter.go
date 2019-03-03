@@ -610,25 +610,25 @@ func (a *adapter) TopicGet(topic string) (*t.Topic, error) {
 
 // kai
 func (a *adapter) TopicGetAllGroups() ([]t.Topic, error) {
-  topics := []t.Topic{}
-  // Fetch all topics
-  if cursor, err := rdb.DB(a.dbName).Table("topics").Filter(func(row rdb.Term) rdb.Term {
-                      return row.Field("Id").Match("^grp")
-                    }).Run(a.conn); err == nil {
-    defer cursor.Close()
+	topics := []t.Topic{}
+	// Fetch all topics
+	if cursor, err := rdb.DB(a.dbName).Table("topics").Filter(func(row rdb.Term) rdb.Term {
+		return row.Field("Id").Match("^grp")
+	}).Run(a.conn); err == nil {
+		defer cursor.Close()
 
-    var topic t.Topic
-    for cursor.Next(&topic) {
-      topics = append(topics, topic)
-    }
+		var topic t.Topic
+		for cursor.Next(&topic) {
+			topics = append(topics, topic)
+		}
 
-    if err = cursor.Err(); err != nil {
-      return nil, err
-    }
-  } else {
-    return nil, err
-  }
-  return topics, nil
+		if err = cursor.Err(); err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, err
+	}
+	return topics, nil
 }
 
 // TopicsForUser loads user's contact list: p2p and grp topics, except for 'me' & 'fnd' subscriptions.
@@ -1188,30 +1188,30 @@ func (a *adapter) MessageSave(msg *t.Message) error {
 // kai
 func (a *adapter) MessageGetLast(topic string) (t.Message, error) {
 
-  var lower, upper interface{}
-  var msg t.Message
+	var lower, upper interface{}
+	var msg t.Message
 
-  upper = rdb.MaxVal
-  lower = rdb.MinVal
+	upper = rdb.MaxVal
+	lower = rdb.MinVal
 
-  lower = []interface{}{topic, lower}
-  upper = []interface{}{topic, upper}
+	lower = []interface{}{topic, lower}
+	upper = []interface{}{topic, upper}
 
-  cursor, err := rdb.DB(a.dbName).Table("messages").
-    Between(lower, upper, rdb.BetweenOpts{Index: "Topic_SeqId"}).
-    OrderBy(rdb.OrderByOpts{Index: rdb.Desc("Topic_SeqId")}).
-    Filter(rdb.Row.HasFields("DelId").Not()).
-    Limit(1).Run(a.conn)
+	cursor, err := rdb.DB(a.dbName).Table("messages").
+		Between(lower, upper, rdb.BetweenOpts{Index: "Topic_SeqId"}).
+		OrderBy(rdb.OrderByOpts{Index: rdb.Desc("Topic_SeqId")}).
+		Filter(rdb.Row.HasFields("DelId").Not()).
+		Limit(1).Run(a.conn)
 
-  if err != nil {
-    return msg, err
-  }
+	if err != nil {
+		return msg, err
+	}
 
-  defer cursor.Close()
+	defer cursor.Close()
 
-  cursor.Next(&msg)
+	cursor.Next(&msg)
 
-  return msg, nil
+	return msg, nil
 }
 
 func (a *adapter) MessageGetAll(topic string, forUser t.Uid, opts *t.QueryOpt) ([]t.Message, error) {

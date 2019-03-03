@@ -20,7 +20,7 @@ type MsgFromVote struct {
 }
 
 type MsgNewVote struct {
-	Proposal  *MsgVoteProposal
+	Proposal *MsgVoteProposal
 
 	Duration  uint
 	PassRate  uint
@@ -47,11 +47,11 @@ type MsgVoteCurrentParam struct {
 }
 
 type MsgVoteProposal struct {
-	Typ  string
-	Data interface{}
+	Typ          string
+	Data         interface{}
 	ContractAddr *string
-	FuncName *string
-	Nonce	  int64
+	FuncName     *string
+	Nonce        int64
 }
 
 type MsgVoteResult struct {
