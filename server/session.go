@@ -367,9 +367,11 @@ func (s *Session) dispatch(msg *ClientComMessage) {
 // Request to subscribe to a topic
 func (s *Session) subscribe(msg *ClientComMessage) {
 	var expanded string
+	newtopic := false
 	if strings.HasPrefix(msg.topic, "new") {
 		// Request to create a new named topic
 		expanded = genTopicName()
+		newtopic = true
 		// msg.topic = expanded
 	} else {
 		var resp *ServerComMessage
@@ -390,11 +392,22 @@ func (s *Session) subscribe(msg *ClientComMessage) {
 			s.queueOut(ErrClusterNodeUnreachable(msg.id, msg.topic, msg.timestamp))
 		}
 	} else {
-		globals.hub.join <- &sessionJoin{
-			topic: expanded,
-			pkt:   msg,
-			sess:  s}
-		// Hub will send Ctrl success/failure packets back to session
+		// kai: if we either create a new group topic, or try to join a group topic
+		//      contract operation is triggered (deploy or set)
+		// todo: we have a small problem here:
+		//       when joining a group topic, the access permissions should be checked prior to sending tx
+		//       leave it as-is in the initial version
+
+		// it's enough, because genTopicName() returns group topic
+		if strings.HasPrefix(expanded, "grp") {
+			go conSub(s, msg, expanded, newtopic)
+		} else {
+			globals.hub.join <- &sessionJoin{
+				topic: expanded,
+				pkt:   msg,
+				sess:  s}
+			// Hub will send Ctrl success/failure packets back to session
+		}
 	}
 }
 
@@ -412,7 +425,7 @@ func (s *Session) leave(msg *ClientComMessage) {
 		if (msg.topic == "me" || msg.topic == "fnd") && msg.Leave.Unsub {
 			// User should not unsubscribe from 'me' or 'find'. Just leaving is fine.
 			s.queueOut(ErrPermissionDenied(msg.id, msg.topic, msg.timestamp))
-		} else if strings.HasPrefix(msg.topic, "grp") && msg.Leave.Unsub {
+		} else if strings.HasPrefix(expanded, "grp") && msg.Leave.Unsub {
 			// kai: unsub the group topic > trigger contract change
 			go conLeave(s, msg, expanded)
 		} else {
@@ -1414,9 +1427,41 @@ func handleTx(s *Session, tx *MsgClientTx, id, topic string, ts time.Time) error
 	}
 }
 
+// kai: helper func to interact with contract and executes sub action when tx is confirmed
+func conSub(s *Session, msg *ClientComMessage, subName string, isNewTopic bool) {
+	if msg.Sub.Tx == nil || msg.Sub.Tx.What != "send" {
+		log.Println("conSub", "unexpected tx.what or tx.type", s.sid)
+		s.queueOut(ErrInvalidTxGeneral(msg.id, msg.topic, msg.timestamp))
+		return
+	}
+
+	if isNewTopic && msg.Sub.Tx.Type != "depcon" {
+		log.Println("conSub", "expect depcon", s.sid)
+		s.queueOut(ErrInvalidTxType(msg.id, msg.topic, msg.timestamp, "depcon"))
+		return
+	} else if !isNewTopic && msg.Sub.Tx.Type != "setcon" {
+		log.Println("conSub", "expect setcon", s.sid)
+		s.queueOut(ErrInvalidTxType(msg.id, msg.topic, msg.timestamp, "setcon"))
+		return
+	}
+
+	err := handleTx(s, msg.Leave.Tx, msg.id, msg.topic, msg.timestamp)
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	// the tx is confirmed, execute the "sub" action
+	globals.hub.join <- &sessionJoin{
+		topic: subName,
+		pkt:   msg,
+		sess:  s}
+	// Hub will send Ctrl success/failure packets back to session
+}
+
 // kai: helper func to interact with contract and executes leave action when tx is confirmed
 func conLeave(s *Session, msg *ClientComMessage, subName string) {
-
 	if msg.Leave.Tx == nil || msg.Leave.Tx.What != "send" || msg.Leave.Tx.Type != "setcon" {
 		log.Println("conLeave", "unexpected tx.what or tx.type", s.sid)
 		s.queueOut(ErrInvalidTxGeneral(msg.id, msg.topic, msg.timestamp))
