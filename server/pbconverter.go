@@ -104,6 +104,8 @@ func pbServTxResSerialize(txres *MsgServerTxRes) *pbx.ServerMsg_TxRes {
 		Type: txres.Type,
 		Id: txres.Id,
 		Topic: txres.Topic,
+		User: txres.User,
+		To: txres.To,
 		TxHash: txres.TxHash,
 		GasPrice: txres.GasPrice,
 		Nonce: txres.Nonce,
@@ -219,6 +221,8 @@ func pbServDeserialize(pkt *pbx.ServerMsg) *ServerComMessage {
 			Type: txres.GetType(),
 			Id: txres.GetId(),
 			Topic: txres.GetTopic(),
+			User: txres.GetUser(),
+			To: txres.GetTo(),
 			TxHash: txres.GetTxHash(),
 			GasPrice: txres.GetGasPrice(),
 			Nonce: txres.GetNonce(),
@@ -269,12 +273,14 @@ func pbCliSerialize(msg *ClientComMessage) *pbx.ClientMsg {
 			Id:       msg.Sub.Id,
 			Topic:    msg.Sub.Topic,
 			SetQuery: pbSetQuerySerialize(msg.Sub.Set),
-			GetQuery: pbGetQuerySerialize(msg.Sub.Get)}}
+			GetQuery: pbGetQuerySerialize(msg.Sub.Get),
+			Tx: pbTxSerialize(msg.Sub.Tx)}}
 	case msg.Leave != nil:
 		pkt.Message = &pbx.ClientMsg_Leave{Leave: &pbx.ClientLeave{
 			Id:    msg.Leave.Id,
 			Topic: msg.Leave.Topic,
-			Unsub: msg.Leave.Unsub}}
+			Unsub: msg.Leave.Unsub,
+			Tx: pbTxSerialize(msg.Leave.Tx)}}
 	case msg.Pub != nil:
 		pkt.Message = &pbx.ClientMsg_Pub{Pub: &pbx.ClientPub{
 			Id:      msg.Pub.Id,
@@ -315,20 +321,7 @@ func pbCliSerialize(msg *ClientComMessage) *pbx.ClientMsg {
 			What:  pbInfoNoteWhatSerialize(msg.Note.What),
 			SeqId: int32(msg.Note.SeqId)}}
 	case msg.Tx != nil:
-		pkt.Message = &pbx.ClientMsg_Tx{Tx: &pbx.ClientTx{
-			What: msg.Tx.What,
-			Type: msg.Tx.Type,
-			Id: msg.Tx.Id,
-			Topic: msg.Tx.Topic,
-			User: msg.Tx.User,
-			PubAddr: msg.Tx.PubAddr,
-			Version: msg.Tx.Version,
-			ChainId: msg.Tx.ChainId,
-			SignedTx: msg.Tx.SignedTx,
-			ConAddr: msg.Tx.ConAddr,
-			Fn: msg.Tx.Fn,
-			Inputs: msg.Tx.Inputs,
-			Value: msg.Tx.Value}}
+		pkt.Message = &pbx.ClientMsg_Tx{Tx: pbTxSerialize(msg.Tx)}
 	}
 
 	if pkt.Message == nil {
@@ -377,12 +370,14 @@ func pbCliDeserialize(pkt *pbx.ClientMsg) *ClientComMessage {
 			Topic: sub.GetTopic(),
 			Get:   pbGetQueryDeserialize(sub.GetGetQuery()),
 			Set:   pbSetQueryDeserialize(sub.GetSetQuery()),
+			Tx: pbTxDeserialize(sub.GetTx()),
 		}
 	} else if leave := pkt.GetLeave(); leave != nil {
 		msg.Leave = &MsgClientLeave{
 			Id:    leave.GetId(),
 			Topic: leave.GetTopic(),
 			Unsub: leave.GetUnsub(),
+			Tx: pbTxDeserialize(leave.GetTx()),
 		}
 	} else if pub := pkt.GetPub(); pub != nil {
 		msg.Pub = &MsgClientPub{
@@ -434,21 +429,7 @@ func pbCliDeserialize(pkt *pbx.ClientMsg) *ClientComMessage {
 			msg.Note.What = "kp"
 		}
 	} else if tx := pkt.GetTx(); tx != nil {
-		msg.Tx = &MsgClientTx{
-			What: tx.GetWhat(),
-			Type: tx.GetType(),
-			Id: tx.GetId(),
-			Topic: tx.GetTopic(),
-			User: tx.GetUser(),
-			PubAddr: tx.GetPubAddr(),
-			Version: tx.GetVersion(),
-			ChainId: tx.GetChainId(),
-			SignedTx: tx.GetSignedTx(),
-			ConAddr: tx.GetConAddr(),
-			Fn: tx.GetFn(),
-			Inputs: tx.GetInputs(),
-			Value: tx.GetValue(),
-		}
+		msg.Tx = pbTxDeserialize(tx)
   }
 
 	msg.from = pkt.GetOnBehalfOf()
@@ -958,4 +939,51 @@ func pbCredentialsDeserialize(in []*pbx.Credential) []MsgAccCred {
 	}
 
 	return out
+}
+
+// kai: helper function to serialize and deserialize {tx}
+//			will be used in multiple interleaved msgs
+func pbTxSerialize(in *MsgClientTx) *pbx.ClientTx {
+	if in == nil {
+		return nil
+	}
+
+	return &pbx.ClientTx {
+		What: in.What,
+		Type: in.Type,
+		Id: in.Id,
+		Topic: in.Topic,
+		User: in.User,
+		PubAddr: in.PubAddr,
+		Version: in.Version,
+		ChainId: in.ChainId,
+		SignedTx: in.SignedTx,
+		ConAddr: in.ConAddr,
+		Fn: in.Fn,
+		Inputs: in.Inputs,
+		Value: in.Value,
+	}
+}
+
+
+func pbTxDeserialize(in *pbx.ClientTx) *MsgClientTx {
+	if in == nil {
+		return nil
+	}
+
+	return &MsgClientTx {
+		What: in.GetWhat(),
+		Type: in.GetType(),
+		Id: in.GetId(),
+		Topic: in.GetTopic(),
+		User: in.GetUser(),
+		PubAddr: in.GetPubAddr(),
+		Version: in.GetVersion(),
+		ChainId: in.GetChainId(),
+		SignedTx: in.GetSignedTx(),
+		ConAddr: in.GetConAddr(),
+		Fn: in.GetFn(),
+		Inputs: in.GetInputs(),
+		Value: in.GetValue(),
+	}
 }

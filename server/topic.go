@@ -19,8 +19,6 @@ import (
   "github.com/tinode/chat/server/push"
   "github.com/tinode/chat/server/store"
   "github.com/tinode/chat/server/store/types"
-
-	bc "github.com/tinode/chat/server/blockchain"
 )
 
 // Topic is an isolated communication channel
@@ -180,11 +178,6 @@ func (t *Topic) run(hub *Hub) {
   var currentUA string
   uaTimer = time.NewTimer(time.Minute)
   uaTimer.Stop()
-
-	// kai: for group topics we init eth handlers
-	if t.cat == types.TopicCatGrp && globals.bcHandlers[t.name] == nil {
-		globals.bcHandlers[t.name] = bc.NewETHHandler()
-	}
 
   for {
     select {

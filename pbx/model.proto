@@ -184,6 +184,9 @@ message ClientSub {
 
 	// mirrors {get}
 	GetQuery get_query = 4;
+
+	// optional {tx}
+	ClientTx tx = 5;
 }
 
 // Unsubscribe {leave} request message
@@ -191,6 +194,8 @@ message ClientLeave {
 	string id = 1;
 	string topic  = 2;
 	bool unsub = 3;
+	// optional {tx}
+	ClientTx tx = 4;
 }
 
 // ClientPub is client's request to publish data to topic subscribers {pub}
@@ -419,16 +424,18 @@ message ServerTxRes {
 	string type = 2;
 	string id = 3;
 	string topic = 4;
-	string tx_hash = 5;
-	int64 gas_price = 6;
-	uint64 nonce = 7;
-	uint64 gas_estimated = 8;
-	bytes data = 9;
-	uint64 gas_used = 10;
-	string con_addr = 11;
-	string fn = 12;
-	string output = 13;
-	bool confirmed = 14;
+	string user = 5;
+	string to = 6;
+	string tx_hash = 7;
+	int64 gas_price = 8;
+	uint64 nonce = 9;
+	uint64 gas_estimated = 10;
+	bytes data = 11;
+	uint64 gas_used = 12;
+	string con_addr = 13;
+	string fn = 14;
+	string output = 15;
+	bool confirmed = 16;
 }
 
 // Cumulative message

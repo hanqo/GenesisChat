@@ -44,7 +44,6 @@ import (
 	_ "github.com/tinode/chat/server/push/stdout"
 
 	"github.com/tinode/chat/server/store"
-	bc "github.com/tinode/chat/server/blockchain"
 
 	// Credential validators
 	_ "github.com/tinode/chat/server/validate/email"
@@ -140,10 +139,6 @@ var globals struct {
 
 	// Maximum allowed upload size.
 	maxFileUploadSize int64
-
-	// map from topic name to eth_handlers
-	// todo: maybe use one single global handler
-	bcHandlers map[string]*bc.ETHHandler
 }
 
 type validatorConfig struct {
@@ -411,10 +406,6 @@ func main() {
 	globals.sessionStore = NewSessionStore(idleSessionTimeout + 15*time.Second)
 	// The hub (the main message router)
 	globals.hub = newHub()
-
-	if globals.bcHandlers == nil {
-		globals.bcHandlers = make(map[string]*bc.ETHHandler)
-	}
 
 	// Start accepting cluster traffic.
 	if globals.cluster != nil {

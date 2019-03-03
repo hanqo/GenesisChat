@@ -160,6 +160,10 @@ type MsgClientSub struct {
 
 	// mirrors {get}
 	Get *MsgGetQuery `json:"get,omitempty"`
+
+	// kai: optional {tx}
+	//			used to deploy or set contract when the user creates or joins group topic
+	Tx *MsgClientTx `json:"tx,omitempty"`
 }
 
 // kai: tx related typedefs
@@ -170,13 +174,19 @@ type MsgClientSub struct {
 // - sends out a tx with signed bytes
 // |type| specifies if it's a plain tx, or contract related (deploy, getter, setter)
 
+// Note: directly sending {tx} is supported only either when type = 'plain', or what = 'init'
+//       for those usecases where sending tx should lead to an action (e.g. leave or join groups)
+//			 please use the action message directly with the {tx} message included. (see step 3 below)
+
 // workflows for 'plain', 'depcon', 'setcon':
 // 1. client initiates a tx with:
 //			tx: { what: "init"  ... }
 // 2. server replies with necessary infos to create a tx, e.g. gas price, nonce etc
 //			txres: { what: "init" ... } 
 // 3. client creates a tx, signs it, and sends it with:
-//			tx: { what: "send" ... }
+//		either tx: { what: "send" ... } , if plain tx is meant to be sent
+//		or     leave: { id: .. , tx : { what: "send", type: "setcon" ...}}, if
+//		       an action is meant to be performed if the tx is confirmed(leave the group in this example)
 // 4. server replies with txres to indicate tx is received
 //			txres: { what: "send" , confirmed: false, ...}
 // 5. server replies with txres to indicate tx is confirmed (on the chain)
@@ -280,6 +290,10 @@ type MsgClientLeave struct {
 	Id    string `json:"id,omitempty"`
 	Topic string `json:"topic"`
 	Unsub bool   `json:"unsub,omitempty"`
+
+	// kai: optional {tx} message
+	//			used to set contract when the user unsubs group topic
+	Tx *MsgClientTx `json"tx,omitempty"`
 }
 
 // MsgClientPub is client's request to publish data to topic subscribers {pub}
@@ -556,6 +570,9 @@ type MsgServerTxRes struct {
 	Id    string `json:"id,omitempty"`
 	Topic string `json:"topic,omitempty"`
 
+	User string `json:"user,omitempty"`
+	To string `json:"to,omitempty"`
+
 	// see MsgTxSent struct
 	// the tx hash if any
 	TxHash string `json:"txhash,omitempty"`
@@ -574,7 +591,7 @@ type MsgServerTxRes struct {
 	// contract address, if any
 	ConAddr string `json:"conaddr,omitempty"`
 
-	// only valid for 'getcon', see MsgCallReturn struct
+	// see MsgCallReturn struct
 	// the function name that is queried
 	Fn string `json:"fn,omitempty"`
 	// the output
@@ -966,22 +983,63 @@ func ErrVersionNotSupported(id, topic string, ts time.Time) *ServerComMessage {
 		Timestamp: ts}}
 }
 
-// ErrContractDeployFailed indicates the smart contract deployment is failed
-func ErrContractDeployFailed(id, topic string, ts time.Time) *ServerComMessage {
+// kai: added error msg
+
+// ErrEmptySignedTx we expect a signed tx but get none
+func ErrEmptySignedTx(id, topic string, ts time.Time) *ServerComMessage {
 	return &ServerComMessage{Ctrl: &MsgServerCtrl{
 		Id:        id,
 		Code:      -101,
-		Text:      "contract deploy failed",
+		Text:      "empty signed tx",
 		Topic:     topic,
 		Timestamp: ts}}
 }
 
-// ErrContractSetFailed indicates the smart contract setter is failed (503)
-func ErrContractSetFailed(id, topic string, ts time.Time) *ServerComMessage {
+// ErrETHHandler invalid (e.g. nil) ETHHandler
+func ErrETHHandler(id, topic string, ts time.Time) *ServerComMessage {
+	return &ServerComMessage{Ctrl: &MsgServerCtrl{
+		Id:        id,
+		Code:      -102,
+		Text:      "eth handler nok",
+		Topic:     topic,
+		Timestamp: ts}}
+}
+
+// ErrInvalidTxInfo invalid tx info, e.g. negative gasprice, negative nonce etc
+func ErrInvalidTxInfo(id, topic string, ts time.Time) *ServerComMessage {
 	return &ServerComMessage{Ctrl: &MsgServerCtrl{
 		Id:        id,
 		Code:      -103,
-		Text:      "contract set failed",
+		Text:      "invalid tx info returned from blockchain",
+		Topic:     topic,
+		Timestamp: ts}}
+}
+
+// ErrInvalidContractAddr invalid(nil) contract address
+func ErrInvalidContractAddr(id, topic string, ts time.Time) *ServerComMessage {
+	return &ServerComMessage{Ctrl: &MsgServerCtrl{
+		Id:        id,
+		Code:      -104,
+		Text:      "invalid contract address from blockchain",
+		Topic:     topic,
+		Timestamp: ts}}
+}
+
+// ErrInvalidTxType invalid tx type
+func ErrInvalidTxType(id, topic string, ts time.Time, e string) *ServerComMessage {
+	return &ServerComMessage{Ctrl: &MsgServerCtrl{
+		Id:        id,
+		Code:      -105,
+		Text:      "invalid tx type, we expect " + e,
+		Topic:     topic,
+		Timestamp: ts}}
+}
+
+func ErrInvalidTxGeneral(id, topic string, ts time.Time) *ServerComMessage {
+	return &ServerComMessage{Ctrl: &MsgServerCtrl{
+		Id:        id,
+		Code:      -106,
+		Text:      "invalid tx general (what or type)",
 		Topic:     topic,
 		Timestamp: ts}}
 }

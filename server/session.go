@@ -17,19 +17,13 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"errors"
 
 	"github.com/gorilla/websocket"
 	"github.com/tinode/chat/pbx"
 	"github.com/tinode/chat/server/auth"
 	"github.com/tinode/chat/server/store"
 	"github.com/tinode/chat/server/store/types"
-
-	"encoding/hex"
-	"fmt"
-	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"math/big"
-
 
 	bc "github.com/tinode/chat/server/blockchain"
 )
@@ -347,10 +341,10 @@ func (s *Session) dispatch(msg *ClientComMessage) {
 		msg.topic = msg.Note.Topic
 		uaRefresh = true
 
-	case msg.Con != nil:
-		handler = checkVers(msg, checkUser(msg, s.con))
-		msg.id = msg.Con.Id
-		msg.topic = msg.Con.Topic
+	case msg.Tx != nil:
+		handler = checkVers(msg, checkUser(msg, s.tx))
+		msg.id = msg.Tx.Id
+		msg.topic = msg.Tx.Topic
 
 	default:
 		// Unknown message
@@ -418,6 +412,9 @@ func (s *Session) leave(msg *ClientComMessage) {
 		if (msg.topic == "me" || msg.topic == "fnd") && msg.Leave.Unsub {
 			// User should not unsubscribe from 'me' or 'find'. Just leaving is fine.
 			s.queueOut(ErrPermissionDenied(msg.id, msg.topic, msg.timestamp))
+		} else if strings.HasPrefix(msg.topic, "grp") && msg.Leave.Unsub {
+			// kai: unsub the group topic > trigger contract change
+			go conLeave(s, msg, expanded)
 		} else {
 			// Unlink from topic, topic will send a reply.
 			s.delSub(expanded)
@@ -1188,56 +1185,11 @@ func (s *Session) note(msg *ClientComMessage) {
 	}
 }
 
-// kai: helper function to create a ServerComMessage msg, return nil if some error happens
-// todo: value unused?
-func createConRes(id string, timestamp time.Time, topic, what, txhash string,
-									gasprice int64, nonce, gasestimated, gasused uint64,
-									conaddr string, confirmed bool, fn, output string) (msg *ServerComMessage) {
-	var r *ServerComMessage
-	r.id = id
-	r.timestamp = timestamp
-	r.ConRes = &MsgServerConRes {
-		Topic: topic,
-		What: what,
-		TxHash: txhash,
-		GasPrice: gasprice,
-		Nonce: nonce,
-		GasEstimated: gasestimated,
-		GasUsed: gasused,
-		ConAddr: conaddr,
-		Confirmed: confirmed,
-		Fn: fn,
-		Output: output,
-	}
-	return r
-}
-
-// kai: helper function to generate raw tx for contract deployment
-//			see generateRawTxDeployContract in eth_handler_test.go
-func createTxForDeploy(gas uint64, gasPrice int64, nonce uint64, data []byte) string {
-	// todo use test network
-	p := "4b62386099abd28f2b63d3a08918cbffc72f4752e3a029747f2a4681b28021c7"
-	chainID := big.NewInt(5777) // ganache
-
-	privateKey, _ := crypto.HexToECDSA(p)
-	amount := big.NewInt(0) // 1 ether
-
-	tx := ethtypes.NewContractCreation(nonce, amount, gas, big.NewInt(gasPrice), data)
-	signedTx, _ := ethtypes.SignTx(tx, ethtypes.NewEIP155Signer(chainID), privateKey)
-
-	ts := ethtypes.Transactions{signedTx}
-	rawTxBytes := ts.GetRlp(0)
-	rawTxHex := hex.EncodeToString(rawTxBytes)
-
-	fmt.Printf("rawTxHex = %s\n",rawTxHex)
-	return rawTxHex
-}
-
-// kai: the con message from client
-func (s *Session) con(msg *ClientComMessage) {
+// kai: the tx message from client
+func (s *Session) tx(msg *ClientComMessage) {
 	
 	if msg.topic == "" {
-		log.Println("we get a con msg but topic name is empty")
+		log.Println("we get a tx msg but topic name is empty")
 		return
 	}
 
@@ -1248,221 +1200,8 @@ func (s *Session) con(msg *ClientComMessage) {
 		return
 	}
 
-	// check if it's group topic
-	if t.cat != types.TopicCatGrp {
-		log.Println("con msg can only target at group topic")
-	}
-
-	// check if eth handler is working
-	h := globals.bcHandlers[msg.topic]
-	if h == nil {
-		log.Println("we get a con msg but eth handler is not running")
-		// todo maybe re-create handlers here
-		return
-	}
-
-	switch msg.Con.What {
-
-	case "deploy":
-		// check the "From" field (public addr) and store it
-		if t.addr != "" && t.addr != msg.Con.From {
-			log.Printf("different public address detected, requested = %s, stored = %s", msg.Con.From, t.addr)
-		}
-		// todo do we need sync here?
-		// todo store it in database
-		t.addr = msg.Con.From
-
-		h.ToChains <- &bc.MsgToChain {
-			From: msg.Con.From,
-			User: msg.Con.User,
-			Version: msg.Con.Version,
-			ChainID: msg.Con.ChainID,
-			Typ: "request_tx",
-			RequestTx: &bc.MsgContractFunc {
-				Function: msg.Con.Fn,
-				Inputs: msg.Con.Inputs,
-			},
-		}
-
-		// async handling
-		go func(h *bc.ETHHandler, s *Session, msg *ClientComMessage, t *Topic) {
-			for {
-				m := <-h.FromChains
-
-				if m.TxInfo != nil {
-					// we get the tx info needed to construct a tx
-					if m.TxInfo.GasPrice <= 0 ||
-						 m.TxInfo.Nonce <= 0 ||
-						 m.TxInfo.Data == nil {
-						log.Println("unabled to construct tx")
-						s.queueOut(ErrContractDeployFailed(msg.id, msg.topic, msg.timestamp))
-						return
-					}
-
-					// todo: no magic numbers
-					tx := createTxForDeploy(5000000, m.TxInfo.GasPrice, m.TxInfo.Nonce, m.TxInfo.Data)
-					h.ToChains <- &bc.MsgToChain {
-						From: msg.Con.From,
-						User: msg.Con.User,
-						Version: msg.Con.Version,
-						ChainID: msg.Con.ChainID,
-						Typ: "signed_tx",
-						SignedTx:  &tx,
-					}
-				} else if m.TxSent != nil {
-					// tx was sent (but not confirmed yet)
-					log.Printf("deploy contract tx sent, hash = %s, gasPrice = %d, nonce = %d, gasEstimated = %d",
-										 m.TxSent.TxHash,
-										 m.TxSent.GasPrice,
-										 m.TxSent.Nonce,
-										 m.TxSent.GasEstimated)
-					var res *ServerComMessage
-					res = createConRes(msg.id, msg.timestamp, msg.topic, "deploy",
-														 m.TxSent.TxHash, m.TxSent.GasPrice, m.TxSent.Nonce,
-														 m.TxSent.GasEstimated, 0, "", false, "", "")
-					s.queueOut(res)
-				} else if m.TxReceipt != nil {
-					// we get the tx receipt
-					if m.TxReceipt.ContractAddr == nil {
-						log.Println("deploy failed: contract address is nil")
-						s.queueOut(ErrContractDeployFailed(msg.id, msg.topic, msg.timestamp))
-						return
-					}
-
-					// store contract addr, todo see above
-					t.conAddr = *m.TxReceipt.ContractAddr
-
-					log.Printf("deploy contract ok, hash = %s, gas = %d, contract address = %s",
-										 m.TxReceipt.TxHash,
-										 m.TxReceipt.GasUsed,
-										 *m.TxReceipt.ContractAddr)
-					var res *ServerComMessage
-					res = createConRes(msg.id, msg.timestamp, msg.topic, "deploy",
-														 m.TxReceipt.TxHash, 0, 0, 0,
-														 m.TxReceipt.GasUsed, *m.TxReceipt.ContractAddr, true, "", "")
-					s.queueOut(res)
-					return
-				}
-			}
-		}(h, s, msg, t)
-
-	case "get":
-
-		if msg.Con.Addr != "" && msg.Con.Addr != t.conAddr {
-			log.Printf("different contract address detected, requested = %s, stored = %s", msg.Con.Addr, t.conAddr)
-			t.conAddr = msg.Con.Addr
-		}
-		h.ToChains <- &bc.MsgToChain {
-			From: msg.Con.From,
-			User: msg.Con.User,
-			Version: msg.Con.Version,
-			ChainID: msg.Con.ChainID,
-			Typ: "contract_call",
-			Call: &bc.MsgCall {
-				ContractAddr: msg.Con.Addr,
-				ContractFunc: bc.MsgContractFunc {
-					Function: msg.Con.Fn,
-				},
-			},
-		}
-
-		go func(h *bc.ETHHandler, s *Session, msg *ClientComMessage) {
-			m := <-h.FromChains
-			if m.CallReturn != nil {
-				log.Printf("getter returns, fn = %s, output = %s", m.CallReturn.Function, m.CallReturn.Output)
-				var res *ServerComMessage
-				res = createConRes(msg.id, msg.timestamp, msg.topic, "get",
-													 "", 0, 0, 0, 0,
-													 msg.Con.Addr, true, m.CallReturn.Function, m.CallReturn.Output)
-				s.queueOut(res)
-			} else {
-				log.Println("we get no returns")
-			}
-		}(h, s, msg)
-
-	case "set":
-
-		// todo: use one func for sanity check
-		if msg.Con.Addr != "" && msg.Con.Addr != t.conAddr {
-			log.Printf("different contract address detected, requested = %s, stored = %s", msg.Con.Addr, t.conAddr)
-			t.conAddr = msg.Con.Addr
-		}
-
-		h.ToChains <- &bc.MsgToChain {
-			From: msg.Con.From,
-			User: msg.Con.User,
-			Version: msg.Con.Version,
-			ChainID: msg.Con.ChainID,
-			Typ: "request_tx",
-			RequestTx: &bc.MsgContractFunc {
-				Function: msg.Con.Fn,
-				Inputs: msg.Con.Inputs,
-			},
-		}
-
-		// async handling
-		// todo use a common function
-		go func(h *bc.ETHHandler, s *Session, msg *ClientComMessage, t *Topic) {
-			for {
-				m := <-h.FromChains
-
-				if m.TxInfo != nil {
-					// we get the tx info needed to construct a tx
-					if m.TxInfo.GasPrice <= 0 ||
-						 m.TxInfo.Nonce <= 0 ||
-						 m.TxInfo.Data == nil {
-						log.Println("unabled to construct tx")
-						s.queueOut(ErrContractSetFailed(msg.id, msg.topic, msg.timestamp))
-						return
-					}
-
-					// todo: no magic numbers
-					tx := createTxForDeploy(5000000, m.TxInfo.GasPrice, m.TxInfo.Nonce, m.TxInfo.Data)
-					h.ToChains <- &bc.MsgToChain {
-						From: msg.Con.From,
-						User: msg.Con.User,
-						Version: msg.Con.Version,
-						ChainID: msg.Con.ChainID,
-						Typ: "signed_tx",
-						SignedTx:  &tx,
-					}
-				} else if m.TxSent != nil {
-					// tx was sent (but not confirmed yet)
-					log.Printf("set contract tx sent, hash = %s, gasPrice = %d, nonce = %d, gasEstimated = %d",
-										 m.TxSent.TxHash,
-										 m.TxSent.GasPrice,
-										 m.TxSent.Nonce,
-										 m.TxSent.GasEstimated)
-					var res *ServerComMessage
-					res = createConRes(msg.id, msg.timestamp, msg.topic, "set",
-														 m.TxSent.TxHash, m.TxSent.GasPrice, m.TxSent.Nonce,
-														 m.TxSent.GasEstimated, 0, "", false, "", "")
-					s.queueOut(res)
-				} else if m.TxReceipt != nil {
-					// we get the tx receipt
-					if m.TxReceipt.ContractAddr == nil {
-						log.Println("deploy failed: contract address is nil")
-						s.queueOut(ErrContractSetFailed(msg.id, msg.topic, msg.timestamp))
-						return
-					}
-
-					// store contract addr, todo see above
-					t.conAddr = *m.TxReceipt.ContractAddr
-
-					log.Printf("deploy contract ok, hash = %s, gas = %d, contract address = %s",
-										 m.TxReceipt.TxHash,
-										 m.TxReceipt.GasUsed,
-										 *m.TxReceipt.ContractAddr)
-					var res *ServerComMessage
-					res = createConRes(msg.id, msg.timestamp, msg.topic, "set",
-														 m.TxReceipt.TxHash, 0, 0, 0,
-														 m.TxReceipt.GasUsed, *m.TxReceipt.ContractAddr, true, "", "")
-					s.queueOut(res)
-					return
-				}
-			}
-		}(h, s, msg, t)
-	}
+	// todo handling of err
+	go handleTx(s, msg.Tx, msg.id, msg.topic, msg.timestamp)
 }
 
 // expandTopicName expands session specific topic name to global name
@@ -1530,3 +1269,175 @@ func (s *Session) serialize(msg *ServerComMessage) interface{} {
 	out, _ := json.Marshal(msg)
 	return out
 }
+
+// kai: helper func to create a {txres} message
+func createTxResMsg(m *bc.MsgFromChain, t, id, topic string, ts time.Time) (*ServerComMessage, error) {
+	var r *ServerComMessage
+	r.id = id
+	r.timestamp = ts
+	r.TxRes = &MsgServerTxRes {
+		Type: t,
+		Id: id,
+		Topic: topic,
+	}
+
+	if m.TxInfo != nil { // we get needed info for creating a tx
+		if m.TxInfo.GasPrice <= 0 || m.TxInfo.Nonce <= 0 {
+			log.Printf("invalid gasprice=%d, nonce=%d\n", m.TxInfo.GasPrice, m.TxInfo.Nonce)
+			return ErrInvalidTxInfo(id, topic, ts), errors.New("invalid tx info")
+		}
+		if (t == "depcon" || t == "setcon") && m.TxInfo.Data == nil {
+			log.Println("nil data")
+			return ErrInvalidTxInfo(id, topic, ts), errors.New("nil data")
+		}
+		r.TxRes.What = "init"
+		r.TxRes.GasPrice = m.TxInfo.GasPrice
+		r.TxRes.Nonce = m.TxInfo.Nonce
+		r.TxRes.Data = m.TxInfo.Data
+		r.TxRes.Fn = m.TxInfo.Function
+		r.TxRes.Confirmed = false
+	} else if m.TxSent != nil { // tx is sent to blockchain
+		r.TxRes.What = "send"
+		r.TxRes.TxHash = m.TxSent.TxHash
+		r.TxRes.GasPrice = m.TxSent.GasPrice
+		r.TxRes.Nonce = m.TxSent.Nonce
+		r.TxRes.GasEstimated = m.TxSent.GasEstimated
+		r.TxRes.Confirmed = false
+	} else if m.TxReceipt != nil { // tx is confirmed
+		if (t == "depcon") {
+			if m.TxReceipt.ContractAddr == nil {
+				log.Println("nil contract addr")
+				return ErrInvalidContractAddr(id, topic, ts), errors.New("nil contract addr")
+			} else {
+				r.TxRes.ConAddr = *m.TxReceipt.ContractAddr
+			}
+		}
+		r.TxRes.What = "send"
+		r.TxRes.TxHash = m.TxReceipt.TxHash
+		r.TxRes.GasUsed = m.TxReceipt.GasUsed
+		r.TxRes.Confirmed = true
+	} else if m.CallReturn != nil { // the query of contract has a result
+		if (t != "getcon") {
+			log.Println("malformed type, we expect a getcon")
+			return ErrInvalidTxType(id, topic, ts, "getcon"), errors.New("we expect a getcon")
+		}
+		r.TxRes.What = "send"
+		r.TxRes.ConAddr = m.CallReturn.ContractAddr
+		r.TxRes.Fn = m.CallReturn.Function
+		r.TxRes.Output = m.CallReturn.Output
+		r.TxRes.Confirmed = true
+	}
+
+	return r, nil
+}
+
+func closeHandler(h *bc.ETHHandler) {
+	log.Println("closing eth handler now...")
+	h.RunDone  <-true
+	h.PollDone <-true
+}
+
+// kai: helper func to handle the tx
+//      blocked till we get a response from blockchain
+func handleTx(s *Session, tx *MsgClientTx, id, topic string, ts time.Time) error {
+	if tx == nil {
+		log.Println("handleTx", "nil tx", s.sid)
+		return errors.New("nil tx")
+	}
+	// create a handler now, stop it when function returns (GC'ed)
+	// todo: add timeout of waiting for blockchain msgs ?
+	h := bc.NewETHHandler()
+	if h == nil {
+		log.Println("handleTx", "nil ETHHandler", s.sid)
+		s.queueOut(ErrETHHandler(id, topic, ts))
+		return errors.New("nil eth handler")
+	}
+
+	defer closeHandler(h)
+
+	mtc := &bc.MsgToChain{
+		From: tx.PubAddr,
+		User: tx.User,
+		Version: tx.Version,
+		ChainID: tx.ChainId,
+		MessageID: tx.Id,
+		SessionID: s.sid,
+	}
+	if tx.What == "init" {
+		mtc.Typ = "request_tx"
+		if tx.Type == "depcon" || tx.Type == "setcon" {
+			mtc.RequestTx = &bc.MsgContractFunc{
+				Function: tx.Fn,
+				Inputs: tx.Inputs,
+			}
+		}
+	} else if tx.What == "send" {
+		if tx.Type == "getcon" {
+			mtc.Typ = "contract_call"
+			if tx.ConAddr == "" {
+				log.Println("handleTx", "nil contract address for getcon", s.sid)
+				return errors.New("nil contract address for getcon")
+			}
+			mtc.Call = &bc.MsgCall{
+				ContractAddr: tx.ConAddr,
+				ContractFunc: bc.MsgContractFunc{
+					Function: tx.Fn,
+					Inputs: tx.Inputs,},
+				Value: &tx.Value,
+			}
+		} else {
+			mtc.Typ = "signed_tx"
+			if tx.SignedTx == "" {
+				log.Println("handleTx", "nil signed tx", s.sid)
+				return errors.New("nil signed tx")
+			}
+			mtc.SignedTx = &tx.SignedTx
+		}
+	} else {
+		log.Println("handleTx", "unknown tx.what", s.sid)
+		return errors.New("unknown tx.what")
+	}
+
+	h.ToChains <- mtc
+
+	// response from blockchain
+	// returns immediately if we don't expect further msgs shortly
+	// todo: timeout mechanism
+	for {
+		mfc := <-h.FromChains
+		o, err := createTxResMsg(mfc, tx.Type, id, topic, ts)
+		s.queueOut(o)
+		if mfc.TxSent == nil {
+			// continue if we get TxSent response, otherwise returns
+			return err
+		}
+	}
+}
+
+// kai: helper func to interact with contract and executes leave action when tx is confirmed
+func conLeave(s *Session, msg *ClientComMessage, subName string) {
+
+	if msg.Leave.Tx == nil || msg.Leave.Tx.What != "send" || msg.Leave.Tx.Type != "setcon" {
+		log.Println("conLeave", "unexpected tx.what or tx.type", s.sid)
+		s.queueOut(ErrInvalidTxGeneral(msg.id, msg.topic, msg.timestamp))
+		return
+	}
+
+	err := handleTx(s, msg.Leave.Tx, msg.id, msg.topic, msg.timestamp)
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	// the tx is confirmed, execute the "leave" action
+	sub := s.getSub(subName)
+	s.delSub(subName)
+	sub.done <- &sessionLeave{
+		userId: types.ParseUserId(msg.from),
+		topic:  msg.topic,
+		sess:   s,
+		unsub:  msg.Leave.Unsub,
+		reqID:  msg.id}
+}
+
