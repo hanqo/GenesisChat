@@ -182,7 +182,7 @@ type MsgClientSub struct {
 // 1. client initiates a tx with:
 //     tx: { what: "init"  ... }
 // 2. server replies with necessary infos to create a tx, e.g. gas price, nonce etc
-//     txres: { what: "init" ... } 
+//     txres: { what: "init" ... }
 // 3. client creates a tx, signs it, and sends it with:
 //    either tx: { what: "send" ... } , if plain tx is meant to be sent
 //    or     leave: { id: .. , tx : { what: "send", type: "setcon" ...}}, if
@@ -438,7 +438,7 @@ type MsgTopicSub struct {
 	Public interface{} `json:"public,omitempty"`
 	// User's own private data per topic
 	Private interface{} `json:"private,omitempty"`
-  // kai: Last message of this topic (visible for all users)
+	// kai: Last message of this topic (visible for all users)
 	LastMsg interface{} `json:"lastmsg,omitempty"`
 
 	// Response to non-'me' topic
@@ -454,7 +454,7 @@ type MsgTopicSub struct {
 	// Timestamp of the last message in the topic.
 	TouchedAt *time.Time `json:"touched,omitempty"`
 	// ID of the last {data} message in a topic
-  // kai: we use this SeqId to represent if the user has subscribed the topic or not
+	// kai: we use this SeqId to represent if the user has subscribed the topic or not
 	SeqId int `json:"seq,omitempty"`
 	// Id of the latest Delete operation
 	DelId int `json:"clear,omitempty"`
@@ -540,7 +540,7 @@ type MsgServerMeta struct {
 	// Topic description
 	Desc *MsgTopicDesc `json:"desc,omitempty"`
 	// Subscriptions as an array of objects
-  // kai: in our case we return a list of all available topics if topic == me
+	// kai: in our case we return a list of all available topics if topic == me
 	Sub []MsgTopicSub `json:"sub,omitempty"`
 	// Delete ID and the ranges of IDs of deleted messages
 	Del *MsgDelValues `json:"del,omitempty"`
@@ -571,7 +571,7 @@ type MsgServerTxRes struct {
 	Topic string `json:"topic,omitempty"`
 
 	User string `json:"user,omitempty"`
-	To string `json:"to,omitempty"`
+	To   string `json:"to,omitempty"`
 
 	// see MsgTxSent struct
 	// the tx hash if any
@@ -582,7 +582,7 @@ type MsgServerTxRes struct {
 	Nonce uint64 `json:"nonce,omitempty"`
 	// the estimated gas amount
 	GasEstimated uint64 `json:"gasestimated,omitempty"`
-  // data from binded contract, only valid for 'depcon' and 'setcon'
+	// data from binded contract, only valid for 'depcon' and 'setcon'
 	Data []byte `json:"data,omitempty"`
 
 	// see MsgTxReceipt struct
@@ -603,11 +603,11 @@ type MsgServerTxRes struct {
 
 // ServerComMessage is a wrapper for server-side messages.
 type ServerComMessage struct {
-	Ctrl *MsgServerCtrl `json:"ctrl,omitempty"`
-	Data *MsgServerData `json:"data,omitempty"`
-	Meta *MsgServerMeta `json:"meta,omitempty"`
-	Pres *MsgServerPres `json:"pres,omitempty"`
-	Info *MsgServerInfo `json:"info,omitempty"`
+	Ctrl  *MsgServerCtrl  `json:"ctrl,omitempty"`
+	Data  *MsgServerData  `json:"data,omitempty"`
+	Meta  *MsgServerMeta  `json:"meta,omitempty"`
+	Pres  *MsgServerPres  `json:"pres,omitempty"`
+	Info  *MsgServerInfo  `json:"info,omitempty"`
 	TxRes *MsgServerTxRes `json:"txres,omitempty"`
 
 	// MsgServerData has no Id field, copying it here for use in {ctrl} aknowledgements
