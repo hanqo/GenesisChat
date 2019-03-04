@@ -41,7 +41,6 @@ type MsgFromChain struct {
 	CallReturn *MsgCallReturn
 	TxInfo     *MsgTxInfo
 }
-
 type MsgTxReceipt struct {
 	Confirmed    bool
 	TxHash       string
@@ -59,7 +58,7 @@ type MsgTxSent struct {
 type MsgCallReturn struct {
 	ContractAddr string
 	Function     string
-	Output       string
+	Output       []string
 }
 
 type MsgTxInfo struct {

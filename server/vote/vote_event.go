@@ -141,6 +141,8 @@ func (e *VoteEvent) timeOut() {
 			msg:= &MsgVoteResult{
 				Topic: e.Topic,
 				Value: true,
+				FinalStatus:e.Status,
+				FinalParam:e.Param,
 			}
 
 			if e.Proposal.Typ == "contract"{
@@ -155,6 +157,8 @@ func (e *VoteEvent) timeOut() {
 			e.chanResult <- &MsgVoteResult{
 				Topic: e.Topic,
 				Value: false,
+				FinalStatus:e.Status,
+				FinalParam:e.Param,
 			}
 		}
 
@@ -166,7 +170,7 @@ func (e *VoteEvent) signVote() string{
 	hash:= solsha3.SoliditySHA3(
 		solsha3.String(e.Proposal.ContractAddr),
 		solsha3.String(e.Proposal.FuncName),
-		solsha3.Uint256(big.NewInt(e.Proposal.Nonce)),
+		solsha3.Uint256(big.NewInt(*e.Proposal.Nonce)),
 	)
 
 	hash = solsha3.SoliditySHA3WithPrefix(hash)

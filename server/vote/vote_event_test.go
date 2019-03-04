@@ -14,7 +14,7 @@ func TestVoteEvent(t *testing.T) {
 	event := NewVoteEvent(
 		"test_owner",
 		"test_topic",
-		nil,
+		&MsgVoteProposal{"not_contract",nil,nil,nil,nil,},
 		10,
 		33,
 		voterList,
@@ -51,35 +51,32 @@ func TestVoteEvent(t *testing.T) {
 
 	status,_ := event.GetStatus("voter1")
 
-	if len(status.ForList) != 5 ||
+	if len(status.ForList) != 5  ||
 		len(status.AgainstList) != 2 ||
 		len(status.AbstainedList) != 1 {
 		t.Error("The result of voting is not correct")
 	}
 
-	fmt.Printf("Abstained Name List\n")
+	t.Log("Abstained Name List")
 	for _, item := range status.AbstainedList {
-		fmt.Printf("%s\t", item)
+		t.Log(item)
 	}
-	fmt.Printf("\n")
 
-	fmt.Printf("Against Name List\n")
+	t.Log("Against Name List")
 	for _, item := range status.AgainstList {
-		fmt.Printf("%s\t", item)
+		t.Log(item)
 	}
-	fmt.Printf("\n")
 
-	fmt.Printf("For Name List\n")
+	t.Log("For Name List")
 	for _, item := range status.ForList {
-		fmt.Printf("%s\t", item)
+		t.Log(item)
 	}
-	fmt.Printf("\n")
 	fmt.Printf("Start time in %s\n", status.Start)
 	fmt.Printf("Expire time in %s\n", status.Expires)
 
 	select {
 	case msg := <-resultVote:
-		fmt.Printf("Result for topic %s is %v", msg.Topic, msg.Value)
+		fmt.Printf("Result for topic %s is %v\n", msg.Topic, msg.Value)
 		if msg.Topic != "test_topic" ||
 			msg.Value != true {
 			t.Error("Vote Result not correct")
