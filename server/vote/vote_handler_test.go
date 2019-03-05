@@ -6,17 +6,18 @@ import (
 	"time"
 )
 
-func TestVoteHandler1(t *testing.T) {
-	v := NewVoteHandler()
+func TestVoteHandler1(t *testing.T){
+	v:= NewVoteHandler()
+	nonce := int64(0)
 	v.ToVote <- &MsgToVote{
-		Owner: "test_owner1",
-		Topic: "test_topic1",
-		Typ:   "new_vote",
-		NewVote: &MsgNewVote{
-			Proposal:  &MsgVoteProposal{"test", nil},
-			Duration:  10,
-			PassRate:  33,
-			VoterList: []string{"voter1", "voter2", "voter3", "voter4", "voter5"}}}
+		Owner:"test_owner1",
+		Topic:"test_topic1",
+		Typ:"new_vote",
+		NewVote:&MsgNewVote{
+			Proposal: &MsgVoteProposal{"test", nil,nil,nil,&nonce},
+			Duration:10,
+			PassRate:33,
+			VoterList:[]string{"voter1","voter2","voter3","voter4","voter5"},},}
 
 	time.Sleep(time.Second * 1)
 
@@ -68,10 +69,10 @@ func TestVoteHandler1(t *testing.T) {
 					t.Error("The status of voting is not correct")
 				}
 
-			} else if msg.Typ == "result" {
-				fmt.Printf("Result for topic %s is %v\n", msg.Topic, msg.Result)
+			}else if msg.Typ== "result"{
+				fmt.Printf("Result for topic %s is %v\n", msg.Topic, msg.Result.Value)
 				if msg.Topic != "test_topic1" ||
-					msg.Result != true {
+					msg.Result.Value != true {
 					t.Error("Vote Result not correct")
 				}
 				return
@@ -91,25 +92,26 @@ func TestVoteHandler1(t *testing.T) {
 func TestVoteHandler2(t *testing.T) {
 	v := NewVoteHandler()
 	resultCnt := 0
+	nonce := int64(0)
 	v.ToVote <- &MsgToVote{
-		Owner: "test_owner1",
-		Topic: "test_topic1",
-		Typ:   "new_vote",
-		NewVote: &MsgNewVote{
-			Proposal:  &MsgVoteProposal{"test", nil},
-			Duration:  10,
-			PassRate:  33,
-			VoterList: []string{"voter1", "voter2", "voter3", "voter4", "voter5"}}}
+		Owner:"test_owner1",
+		Topic:"test_topic1",
+		Typ:"new_vote",
+		NewVote:&MsgNewVote{
+			Proposal: &MsgVoteProposal{"test", nil,nil,nil, &nonce},
+			Duration:10,
+			PassRate:33,
+			VoterList:[]string{"voter1","voter2","voter3","voter4","voter5"},},}
 
 	v.ToVote <- &MsgToVote{
-		Owner: "test_owner2",
-		Topic: "test_topic2",
-		Typ:   "new_vote",
-		NewVote: &MsgNewVote{
-			Proposal:  &MsgVoteProposal{"test", nil},
-			Duration:  10,
-			PassRate:  33,
-			VoterList: []string{"voter5", "voter6", "voter7", "voter8", "voter9"}}}
+		Owner:"test_owner2",
+		Topic:"test_topic2",
+		Typ:"new_vote",
+		NewVote:&MsgNewVote{
+			Proposal: &MsgVoteProposal{"test", nil,nil,nil, &nonce},
+			Duration:10,
+			PassRate:33,
+			VoterList:[]string{"voter5","voter6","voter7","voter8","voter9"},},}
 
 	time.Sleep(time.Second * 1)
 
@@ -161,19 +163,19 @@ func TestVoteHandler2(t *testing.T) {
 	for {
 		select {
 		case msg := <-v.FromVote:
-			if msg.Typ == "result" {
-				resultCnt++
-				fmt.Printf("Result for topic %s is %v\n", msg.Topic, msg.Result)
+			 if msg.Typ== "result"{
+			 	resultCnt ++
+				fmt.Printf("Result for topic %s is %v\n", msg.Topic, msg.Result.Value)
 
 				if msg.Topic == "test_topic1" &&
-					msg.Result != true {
+					msg.Result.Value != true {
 					t.Error("Vote Result not correct")
 				}
 
-				if msg.Topic == "test_topic2" &&
-					msg.Result != false {
-					t.Error("Vote Result not correct")
-				}
+				 if msg.Topic == "test_topic2" &&
+					 msg.Result.Value != false {
+					 t.Error("Vote Result not correct")
+				 }
 
 				if resultCnt >= 2 {
 					return

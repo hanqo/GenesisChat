@@ -260,7 +260,10 @@ func (h *ETHHandler) callContract(r *MsgToChain) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	var output []string
 	retStr, err := h.abi.unpackContractFunc(returnByte, r.Call.ContractFunc.Function)
+
+	output = append(output,retStr)
 
 	h.FromChains <- &MsgFromChain{
 		To:        r.From,
@@ -274,7 +277,7 @@ func (h *ETHHandler) callContract(r *MsgToChain) {
 		CallReturn: &MsgCallReturn{
 			Function:     r.Call.ContractFunc.Function,
 			ContractAddr: r.Call.ContractAddr,
-			Output:       retStr},
+			Output:       output},
 	}
 }
 

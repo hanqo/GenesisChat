@@ -5,12 +5,13 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/miguelmota/go-solidity-sha3"
 	"log"
-	"math/big"
+	"strconv"
 	"sync"
 	"time"
 )
 
 const priv = "4b62386099abd28f2b63d3a08918cbffc72f4752e3a029747f2a4681b28021c7"
+const addr = "0xb04b61254B42d64f17938E5DCe2eb728cAfF8937"
 
 type VoteEvent struct {
 	Owner string
@@ -140,6 +141,8 @@ func (e *VoteEvent) timeOut() {
 			msg := &MsgVoteResult{
 				Topic: e.Topic,
 				Value: true,
+				FinalStatus:e.Status,
+				FinalParam:e.Param,
 			}
 
 			if e.Proposal.Typ == "contract" {
@@ -154,6 +157,8 @@ func (e *VoteEvent) timeOut() {
 			e.chanResult <- &MsgVoteResult{
 				Topic: e.Topic,
 				Value: false,
+				FinalStatus:e.Status,
+				FinalParam:e.Param,
 			}
 		}
 
@@ -161,15 +166,15 @@ func (e *VoteEvent) timeOut() {
 	}
 }
 
-func (e *VoteEvent) signVote() string {
-	hash := solsha3.SoliditySHA3(
-		solsha3.String(e.Proposal.ContractAddr),
-		solsha3.String(e.Proposal.FuncName),
-		solsha3.Uint256(big.NewInt(e.Proposal.Nonce)),
+func (e *VoteEvent) signVote() string{
+	nonce := strconv.FormatInt(*e.Proposal.Nonce,10)
+
+	hash:= solsha3.SoliditySHA3(
+		solsha3.Address(*e.Proposal.ContractAddr),  //MUST use * here !!!!
+		solsha3.String(*e.Proposal.FuncName),
+		solsha3.Uint256(nonce),
 	)
-
 	hash = solsha3.SoliditySHA3WithPrefix(hash)
-
 	privateKey, _ := crypto.HexToECDSA(priv)
 	sig, err := crypto.Sign(hash, privateKey)
 
