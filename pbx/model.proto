@@ -434,7 +434,7 @@ message ServerTxRes {
 	uint64 gas_used = 12;
 	string con_addr = 13;
 	string fn = 14;
-	string output = 15;
+	repeated string output = 15;
 	bool confirmed = 16;
 }
 

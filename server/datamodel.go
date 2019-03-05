@@ -595,7 +595,7 @@ type MsgServerTxRes struct {
 	// the function name that is queried
 	Fn string `json:"fn,omitempty"`
 	// the output
-	Output string `json:"output,omitempty"`
+	Output []string `json:"output,omitempty"`
 
 	// if this tx is confirmed
 	Confirmed bool `json:"confirmed,omitempty"`
