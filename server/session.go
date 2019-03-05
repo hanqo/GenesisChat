@@ -368,6 +368,7 @@ func (s *Session) dispatch(msg *ClientComMessage) {
 func (s *Session) subscribe(msg *ClientComMessage) {
 	var expanded string
 	newtopic := false
+	subscribed := false
 	if strings.HasPrefix(msg.topic, "new") {
 		// Request to create a new named topic
 		expanded = genTopicName()
@@ -380,6 +381,17 @@ func (s *Session) subscribe(msg *ClientComMessage) {
 			s.queueOut(resp)
 			return
 		}
+
+		uid := types.ParseUserId(msg.from)
+		subs, err := store.Users.GetTopicsAny(uid, msgOpts2storeOpts(&MsgGetOpts{Topic: expanded}))
+		if err != nil {
+			s.queueOut(decodeStoreError(err, msg.id, msg.topic, types.TimeNow(), nil))
+			return
+		}
+
+		if subs != nil {
+			subscribed = true
+		}
 	}
 
 	if sub := s.getSub(expanded); sub != nil {
@@ -391,23 +403,28 @@ func (s *Session) subscribe(msg *ClientComMessage) {
 			log.Println("s.subscribe:", err, s.sid)
 			s.queueOut(ErrClusterNodeUnreachable(msg.id, msg.topic, msg.timestamp))
 		}
-	} else {
-		// kai: if we either create a new group topic, or try to join a group topic
-		//      contract operation is triggered (deploy or set)
+		// kai: contract operation is triggered (deploy or set) if:
+		//      1) user tries to create a new topic
+		//      2) user tries to join a group topic which he hasn't subscribed
+
+		//      1) is easy
+		//      2) API docu says: "When subscribing, the server checks user's access
+		//         permissions against topic's access control list.
+		//         It may grant immediate access, deny access, may generate a request for approval from topic managers."
+
+		//         but I don't find an example of "generate a request", and in demo-app there's no "add group" button
+		//
 		// todo: we have a small problem here:
 		//       when joining a group topic, the access permissions should be checked prior to sending tx
 		//       leave it as-is in the initial version
-
-		// it's enough, because genTopicName() returns group topic
-		if strings.HasPrefix(expanded, "grp") {
-			go conSub(s, msg, expanded, newtopic)
-		} else {
-			globals.hub.join <- &sessionJoin{
-				topic: expanded,
-				pkt:   msg,
-				sess:  s}
-			// Hub will send Ctrl success/failure packets back to session
-		}
+	} else if strings.HasPrefix(expanded, "grp") && (newtopic || !subscribed) {
+		go conSub(s, msg, expanded, newtopic)
+	} else {
+		globals.hub.join <- &sessionJoin{
+			topic: expanded,
+			pkt:   msg,
+			sess:  s}
+		// Hub will send Ctrl success/failure packets back to session
 	}
 }
 
@@ -1445,14 +1462,14 @@ func conSub(s *Session, msg *ClientComMessage, subName string, isNewTopic bool) 
 		return
 	}
 
-	err := handleTx(s, msg.Leave.Tx, msg.id, msg.topic, msg.timestamp)
+	err := handleTx(s, msg.Sub.Tx, msg.id, msg.topic, msg.timestamp)
 
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
-	// the tx is confirmed, execute the "sub" action
+	// tx is confirmed, execute the "sub" action
 	globals.hub.join <- &sessionJoin{
 		topic: subName,
 		pkt:   msg,
@@ -1475,7 +1492,7 @@ func conLeave(s *Session, msg *ClientComMessage, subName string) {
 		return
 	}
 
-	// the tx is confirmed, execute the "leave" action
+	// tx is confirmed, execute the "leave" action
 	sub := s.getSub(subName)
 	s.delSub(subName)
 	sub.done <- &sessionLeave{

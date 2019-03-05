@@ -162,7 +162,7 @@ type MsgClientSub struct {
 	Get *MsgGetQuery `json:"get,omitempty"`
 
 	// kai: optional {tx}
-	//			used to deploy or set contract when the user creates or joins group topic
+	//      used to deploy or set contract when the user creates or joins group topic
 	Tx *MsgClientTx `json:"tx,omitempty"`
 }
 
