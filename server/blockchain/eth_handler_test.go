@@ -15,22 +15,22 @@ import (
 	"time"
 	"github.com/AfterworkBlockchain/GenesisChat/server/vote"
 )
-const addr = "0x0693f75385fD3DDD8f893494AC34519d3E680BF5"
-const priv = "707affe0a00449a493c39082f1a9e3925ac150cac067b7a9f20c8e438e0dc0d4"
-const receiver = "0x218778aA387BCCD5167B6881B4Fc210f0ebFe5Ae"
+const addr = "0xb66785f087B0A100c39c39B801104D22086FF1bE"
+const priv = "E9A6D816389523F51B7CB44EB16CD661050F6F85B4268D452E4745B74619F1D2"
+const receiver = "0xb66785f087B0A100c39c39B801104D22086FF1bE"
 
-var chainID = big.NewInt(5777)
+var chainID = big.NewInt(3) //ropsten
 
 func generateRawTxNaive(t *testing.T) string{
 
-	client, err := ethclient.Dial("http://127.0.0.1:7545") //Ganache local address
+	client, err := ethclient.Dial(ethRPCAddr) //Ganache local address
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	privateKey, _ := crypto.HexToECDSA(priv)
 	recipientAddr := common.HexToAddress(receiver)
-	amount := big.NewInt(1000000000000000000) // 1 ether
+	amount := big.NewInt(1000000000000 ) // 0.01ether
 	gasLimit := uint64(100000)
 
 	publicKey := privateKey.Public()
@@ -78,7 +78,7 @@ func generateRawTxDeployContract(t *testing.T, gas uint64, gasPrice int64, nonce
 func generateRawTxSetContract(t *testing.T, contractAddr string, gas uint64, gasPrice int64, nonce uint64, data []byte) string{
 	recipientAddr := common.HexToAddress(contractAddr)
 
-	chainID := big.NewInt(5777) // ganache
+	chainID := big.NewInt(3) // ropsten
 
 	privateKey, _ := crypto.HexToECDSA(priv)
 	amount := big.NewInt(0) // 1 ether
@@ -102,7 +102,7 @@ func deployContract(t *testing.T) *string{
 		From:    addr,
 		User:    "test1",
 		Version: "1",
-		ChainID: 123,
+		ChainID: 3,
 		Typ:     "request_tx",
 		RequestTx:  	&MsgContractFunc{
 			Function: "",
@@ -136,7 +136,7 @@ func deployContract(t *testing.T) *string{
 					From:     addr,
 					User:     "test1",
 					Version:  "1",
-					ChainID:  123,
+					ChainID:  3,
 					Typ:      "signed_tx",
 					SignedTx: &rawTxData2,}
 
@@ -251,7 +251,7 @@ func setContract(t *testing.T, contractAddr *string) {
 		From:    addr,
 		User:    "test1",
 		Version: "1",
-		ChainID: 123,
+		ChainID: 3,
 		Typ:     "request_tx",
 		RequestTx: &MsgContractFunc{
 			Function: funcName,
@@ -274,7 +274,7 @@ func setContract(t *testing.T, contractAddr *string) {
 					From:     addr,
 					User:     "test1",
 					Version:  "1",
-					ChainID:  123,
+					ChainID:  3,
 					Typ:      "signed_tx",
 					SignedTx: &rawTxData3,}
 			}else if msg.TxReceipt != nil{
@@ -294,7 +294,7 @@ func callContract(t *testing.T, contractAddr *string) {
 		From:    addr,
 		User:    "test1",
 		Version: "1",
-		ChainID: 123,
+		ChainID: 3,
 		Typ:     "contract_call",
 		Call: &MsgCall{
 			ContractAddr: *contractAddr,
@@ -325,7 +325,7 @@ func TestSendNaiveTx(t *testing.T) {
 		From:     addr,
 		User:     "test1",
 		Version:  "1",
-		ChainID:  123,
+		ChainID:  3,
 		Typ:      "signed_tx",
 		SignedTx: &rawTxData1,}
 	for {
