@@ -138,10 +138,10 @@ func (e *VoteEvent) timeOut() {
 
 		if currentRate-float64(e.Param.PassRate) > 0 {
 			msg := &MsgVoteResult{
-				Topic: e.Topic,
-				Value: true,
-				FinalStatus:e.Status,
-				FinalParam:e.Param,
+				Topic:       e.Topic,
+				Value:       true,
+				FinalStatus: e.Status,
+				FinalParam:  e.Param,
 			}
 
 			if e.Proposal.Typ == "contract" {
@@ -154,10 +154,10 @@ func (e *VoteEvent) timeOut() {
 
 		} else {
 			e.chanResult <- &MsgVoteResult{
-				Topic: e.Topic,
-				Value: false,
-				FinalStatus:e.Status,
-				FinalParam:e.Param,
+				Topic:       e.Topic,
+				Value:       false,
+				FinalStatus: e.Status,
+				FinalParam:  e.Param,
 			}
 		}
 
@@ -165,10 +165,10 @@ func (e *VoteEvent) timeOut() {
 	}
 }
 
-func (e *VoteEvent) signVote() string{
+func (e *VoteEvent) signVote() string {
 
-	hash:= solsha3.SoliditySHA3(
-		solsha3.Address(*e.Proposal.ContractAddr),  //MUST use * here !!!!
+	hash := solsha3.SoliditySHA3(
+		solsha3.Address(*e.Proposal.ContractAddr), //MUST use * here !!!!
 		solsha3.String(*e.Proposal.FuncName),
 		solsha3.Uint256(*e.Proposal.Nonce),
 	)

@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
+	"github.com/AfterworkBlockchain/GenesisChat/server/vote"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -13,15 +14,15 @@ import (
 	"math/big"
 	"testing"
 	"time"
-	"github.com/AfterworkBlockchain/GenesisChat/server/vote"
 )
+
 const addr = "0xb66785f087B0A100c39c39B801104D22086FF1bE"
 const priv = "E9A6D816389523F51B7CB44EB16CD661050F6F85B4268D452E4745B74619F1D2"
 const receiver = "0xb66785f087B0A100c39c39B801104D22086FF1bE"
 
 var chainID = big.NewInt(3) //ropsten
 
-func generateRawTxNaive(t *testing.T) string{
+func generateRawTxNaive(t *testing.T) string {
 
 	client, err := ethclient.Dial(ethRPCAddr) //Ganache local address
 	if err != nil {
@@ -30,7 +31,7 @@ func generateRawTxNaive(t *testing.T) string{
 
 	privateKey, _ := crypto.HexToECDSA(priv)
 	recipientAddr := common.HexToAddress(receiver)
-	amount := big.NewInt(1000000000000 ) // 0.01ether
+	amount := big.NewInt(1000000000000) // 0.01ether
 	gasLimit := uint64(100000)
 
 	publicKey := privateKey.Public()
@@ -53,11 +54,11 @@ func generateRawTxNaive(t *testing.T) string{
 	rawTxBytes := ts.GetRlp(0)
 	rawTxHex := hex.EncodeToString(rawTxBytes)
 
-	t.Log("naive raw tx hex:",rawTxHex)
+	t.Log("naive raw tx hex:", rawTxHex)
 	return rawTxHex
 }
 
-func generateRawTxDeployContract(t *testing.T, gas uint64, gasPrice int64, nonce uint64, data []byte) string{
+func generateRawTxDeployContract(t *testing.T, gas uint64, gasPrice int64, nonce uint64, data []byte) string {
 
 	privateKey, _ := crypto.HexToECDSA(priv)
 	amount := big.NewInt(0) // 1 ether
@@ -71,11 +72,11 @@ func generateRawTxDeployContract(t *testing.T, gas uint64, gasPrice int64, nonce
 	rawTxBytes := ts.GetRlp(0)
 	rawTxHex := hex.EncodeToString(rawTxBytes)
 
-	t.Log("raw tx 2 hex:",rawTxHex)
+	t.Log("raw tx 2 hex:", rawTxHex)
 	return rawTxHex
 }
 
-func generateRawTxSetContract(t *testing.T, contractAddr string, gas uint64, gasPrice int64, nonce uint64, data []byte) string{
+func generateRawTxSetContract(t *testing.T, contractAddr string, gas uint64, gasPrice int64, nonce uint64, data []byte) string {
 	recipientAddr := common.HexToAddress(contractAddr)
 
 	chainID := big.NewInt(3) // ropsten
@@ -92,11 +93,11 @@ func generateRawTxSetContract(t *testing.T, contractAddr string, gas uint64, gas
 	rawTxBytes := ts.GetRlp(0)
 	rawTxHex := hex.EncodeToString(rawTxBytes)
 
-	t.Log("raw tx 2 hex:",rawTxHex)
+	t.Log("raw tx 2 hex:", rawTxHex)
 	return rawTxHex
 }
 
-func deployContract(t *testing.T) *string{
+func deployContract(t *testing.T) *string {
 	h := NewETHHandler()
 	m := &MsgToChain{
 		From:    addr,
@@ -117,7 +118,7 @@ func deployContract(t *testing.T) *string{
 				t.Log("deploy tx Sent with gas price:", msg.TxSent.GasPrice)
 				t.Log("deploy tx Sent with Nonce:", msg.TxSent.Nonce)
 				t.Log("deploy tx Sent with estimated gas:", msg.TxSent.GasEstimated)
-			}else if msg.TxInfo != nil{
+			} else if msg.TxInfo != nil {
 				if msg.TxInfo.Function != m.RequestTx.Function {
 					t.Error("Function name not equal")
 				}
@@ -130,7 +131,7 @@ func deployContract(t *testing.T) *string{
 				if msg.TxInfo.Data == nil {
 					t.Error("Data field is nil")
 				}
-				rawTxData2 := generateRawTxDeployContract(t,5000000,msg.TxInfo.GasPrice,msg.TxInfo.Nonce,msg.TxInfo.Data)
+				rawTxData2 := generateRawTxDeployContract(t, 5000000, msg.TxInfo.GasPrice, msg.TxInfo.Nonce, msg.TxInfo.Data)
 
 				h.ToChains <- &MsgToChain{
 					From:     addr,
@@ -153,80 +154,80 @@ func deployContract(t *testing.T) *string{
 	}
 }
 
-func voteProcess(t *testing.T, contractAddr *string, funcName *string, voteNonce *string) *vote.MsgVoteResult{
-	v:= vote.NewVoteHandler()
+func voteProcess(t *testing.T, contractAddr *string, funcName *string, voteNonce *string) *vote.MsgVoteResult {
+	v := vote.NewVoteHandler()
 	v.ToVote <- &vote.MsgToVote{
-		Owner:"test_owner1",
-		Topic:"test_topic1",
-		Typ:"new_vote",
-		NewVote:&vote.MsgNewVote{
-			Proposal: &vote.MsgVoteProposal{"contract", nil,contractAddr,funcName, voteNonce},
-			Duration:10,
-			PassRate:33,
-			VoterList:[]string{"voter1","voter2","voter3","voter4","voter5"},},}
+		Owner: "test_owner1",
+		Topic: "test_topic1",
+		Typ:   "new_vote",
+		NewVote: &vote.MsgNewVote{
+			Proposal:  &vote.MsgVoteProposal{"contract", nil, contractAddr, funcName, voteNonce},
+			Duration:  10,
+			PassRate:  33,
+			VoterList: []string{"voter1", "voter2", "voter3", "voter4", "voter5"}}}
 
 	time.Sleep(time.Second * 1)
 
 	//Vote starts
 	v.ToVote <- &vote.MsgToVote{
-		Owner:"voter1",
-		Topic:"test_topic1",
-		Typ:"vote",
-		Ballot: &vote.MsgBallot{0},}
+		Owner:  "voter1",
+		Topic:  "test_topic1",
+		Typ:    "vote",
+		Ballot: &vote.MsgBallot{0}}
 	v.ToVote <- &vote.MsgToVote{
-		Owner:"voter2",
-		Topic:"test_topic1",
-		Typ:"vote",
-		Ballot: &vote.MsgBallot{2},}
+		Owner:  "voter2",
+		Topic:  "test_topic1",
+		Typ:    "vote",
+		Ballot: &vote.MsgBallot{2}}
 	v.ToVote <- &vote.MsgToVote{
-		Owner:"voter3",
-		Topic:"test_topic1",
-		Typ:"vote",
-		Ballot: &vote.MsgBallot{1},}
+		Owner:  "voter3",
+		Topic:  "test_topic1",
+		Typ:    "vote",
+		Ballot: &vote.MsgBallot{1}}
 	v.ToVote <- &vote.MsgToVote{
-		Owner:"voter4",
-		Topic:"test_topic1",
-		Typ:"vote",
-		Ballot: &vote.MsgBallot{1},}
+		Owner:  "voter4",
+		Topic:  "test_topic1",
+		Typ:    "vote",
+		Ballot: &vote.MsgBallot{1}}
 	time.Sleep(time.Second * 1)
 
 	//Request status of vote
 	v.ToVote <- &vote.MsgToVote{
-		Owner:"voter4",
-		Topic:"test_topic1",
-		Typ:"status",}
+		Owner: "voter4",
+		Topic: "test_topic1",
+		Typ:   "status"}
 
 	//Request paramter of vote
 	v.ToVote <- &vote.MsgToVote{
-		Owner:"voter5",
-		Topic:"test_topic1",
-		Typ:"parameter",}
+		Owner: "voter5",
+		Topic: "test_topic1",
+		Typ:   "parameter"}
 
 	time.Sleep(time.Second * 1)
 
-	for{
+	for {
 		select {
 		case msg := <-v.FromVote:
-			if msg.Typ == "status"{
+			if msg.Typ == "status" {
 				status := msg.Status
-				if len(status.ForList) != 2||
+				if len(status.ForList) != 2 ||
 					len(status.AgainstList) != 1 ||
 					len(status.AbstainedList) != 1 {
 					t.Error("The status of voting is not correct")
 				}
 
-			}else if msg.Typ== "result"{
+			} else if msg.Typ == "result" {
 				fmt.Printf("result for topic %s is %v\n", msg.Topic, msg.Result.Value)
 				if msg.Topic != "test_topic1" ||
 					msg.Result.Value != true {
 					t.Error("Vote Result not correct")
 				}
-				return  msg.Result
+				return msg.Result
 
-			}else if msg.Typ== "parameter"{
-				param:= msg.Param
+			} else if msg.Typ == "parameter" {
+				param := msg.Param
 
-				if param.PassRate!=33||param.Duration!= 10||param.VoterSize!= 5{
+				if param.PassRate != 33 || param.Duration != 10 || param.VoterSize != 5 {
 					t.Error("Vote Paramter not correct")
 				}
 			}
@@ -238,13 +239,13 @@ func setContract(t *testing.T, contractAddr *string) {
 	h := NewETHHandler()
 	funcName := "setCost"
 	voteNonce := "1"
-	res := voteProcess(t,contractAddr, &funcName, &voteNonce)
+	res := voteProcess(t, contractAddr, &funcName, &voteNonce)
 
-	if res.Value != true{
+	if res.Value != true {
 		t.Error("Proposal is not passed in vote")
 	}
 
-	input := []string{"500","600"}
+	input := []string{"500", "600"}
 
 	input = append(input, *res.Proposal.Nonce, *res.Signature)
 	m := &MsgToChain{
@@ -255,7 +256,7 @@ func setContract(t *testing.T, contractAddr *string) {
 		Typ:     "request_tx",
 		RequestTx: &MsgContractFunc{
 			Function: funcName,
-			Inputs:   input,},}
+			Inputs:   input}}
 
 	h.ToChains <- m
 
@@ -268,7 +269,7 @@ func setContract(t *testing.T, contractAddr *string) {
 				t.Log("set tx Sent with nonce:", msg.TxSent.Nonce)
 				t.Log("set tx Sent with estimated gas:", msg.TxSent.GasEstimated)
 			} else if msg.TxInfo != nil {
-				rawTxData3 := generateRawTxSetContract(t,*contractAddr, 500000, msg.TxInfo.GasPrice, msg.TxInfo.Nonce, msg.TxInfo.Data)
+				rawTxData3 := generateRawTxSetContract(t, *contractAddr, 500000, msg.TxInfo.GasPrice, msg.TxInfo.Nonce, msg.TxInfo.Data)
 
 				h.ToChains <- &MsgToChain{
 					From:     addr,
@@ -299,8 +300,8 @@ func callContract(t *testing.T, contractAddr *string) {
 		Call: &MsgCall{
 			ContractAddr: *contractAddr,
 			ContractFunc: MsgContractFunc{
-				Function: "getCost",},
-		},}
+				Function: "getCost"},
+		}}
 
 	h.ToChains <- m
 	for {
@@ -319,7 +320,7 @@ func callContract(t *testing.T, contractAddr *string) {
 func TestSendNaiveTx(t *testing.T) {
 	//----------------------Test naive transaction and polling--------------------------------------------------------//
 	h := NewETHHandler()
-	rawTxData1 :=generateRawTxNaive(t)
+	rawTxData1 := generateRawTxNaive(t)
 
 	h.ToChains <- &MsgToChain{
 		From:     addr,
@@ -327,7 +328,7 @@ func TestSendNaiveTx(t *testing.T) {
 		Version:  "1",
 		ChainID:  3,
 		Typ:      "signed_tx",
-		SignedTx: &rawTxData1,}
+		SignedTx: &rawTxData1}
 	for {
 		select {
 		case msg := <-h.FromChains:
@@ -347,9 +348,9 @@ func TestSendNaiveTx(t *testing.T) {
 	}
 }
 
-func TestSmartContract(t *testing.T){
-	contractAddr :=deployContract(t)
-	setContract(t,contractAddr)
-	callContract(t,contractAddr)
+func TestSmartContract(t *testing.T) {
+	contractAddr := deployContract(t)
+	setContract(t, contractAddr)
+	callContract(t, contractAddr)
 	return
 }

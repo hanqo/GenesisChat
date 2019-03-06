@@ -58,8 +58,8 @@ type MsgVoteResult struct {
 	Topic string
 	Value bool
 
-	Proposal  		*MsgVoteProposal
-	FinalStatus 	*MsgVoteStatus
-	FinalParam   	*MsgVoteCurrentParam
-	Signature 		*string
+	Proposal    *MsgVoteProposal
+	FinalStatus *MsgVoteStatus
+	FinalParam  *MsgVoteCurrentParam
+	Signature   *string
 }

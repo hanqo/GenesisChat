@@ -10,7 +10,7 @@ type MsgToChain struct {
 	MessageID string
 	SessionID string
 
-	Typ     string
+	Typ string
 
 	SignedTx  *string
 	RequestTx *MsgContractFunc

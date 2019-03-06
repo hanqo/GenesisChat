@@ -20,7 +20,7 @@ func TestVoteEvent(t *testing.T) {
 	event := NewVoteEvent(
 		"test_owner",
 		"test_topic",
-		&MsgVoteProposal{"contract",nil,&contracAddr,&funcName,&nonce,},
+		&MsgVoteProposal{"contract", nil, &contracAddr, &funcName, &nonce},
 		10,
 		33,
 		voterList,
@@ -57,7 +57,7 @@ func TestVoteEvent(t *testing.T) {
 
 	status, _ := event.GetStatus("voter1")
 
-	if len(status.ForList) != 5  ||
+	if len(status.ForList) != 5 ||
 		len(status.AgainstList) != 2 ||
 		len(status.AbstainedList) != 1 {
 		t.Error("The result of voting is not correct")
@@ -91,7 +91,7 @@ func TestVoteEvent(t *testing.T) {
 	case msg := <-resultVote:
 		fmt.Printf("Result for topic %s is %v\n", msg.Topic, msg.Value)
 		if msg.Topic != "test_topic" ||
-			msg.Value != true{
+			msg.Value != true {
 			t.Error("Vote Result not correct")
 		}
 
@@ -102,14 +102,14 @@ func TestVoteEvent(t *testing.T) {
 		//hash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
 		hashStr := "1c04ad9fc1764607002e5bfe4b71538883f2fa7ad488d9d48d71ced019e6224a"
 
-		hash,err:= hex.DecodeString(hashStr)
-		if err != nil{
-			t.Error ("Decode hash from string triggers error")
+		hash, err := hex.DecodeString(hashStr)
+		if err != nil {
+			t.Error("Decode hash from string triggers error")
 		}
 
-		sig,err:= hex.DecodeString(*msg.Signature)
-		if err != nil{
-			t.Error ("Decode sig from string triggers error")
+		sig, err := hex.DecodeString(*msg.Signature)
+		if err != nil {
+			t.Error("Decode sig from string triggers error")
 		}
 
 		sigECDSA, err := crypto.SigToPub(hash, sig)
@@ -118,8 +118,8 @@ func TestVoteEvent(t *testing.T) {
 
 		addrStr := pub.String()
 
-		if addrStr != addr{
-			t.Error ("Vote Signature not correct")
+		if addrStr != addr {
+			t.Error("Vote Signature not correct")
 		}
 		fmt.Printf("address signed is %s, as same as admin addr\n", addrStr)
 	}

@@ -17,6 +17,7 @@ import (
 //TODO(xrisheng):move config To config file.
 //TODO(xrisheng):eth event handler
 const ethRPCAddr = "https://ropsten.infura.io/v3/0d516dfa7a53437c8be98daa8a7dcfe3"
+
 //var ethRPCAddr = "http://127.0.0.1:7545"
 
 type ETHHandler struct {
