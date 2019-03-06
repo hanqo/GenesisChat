@@ -176,9 +176,7 @@ type MsgClientSub struct {
 	Tx *MsgClientTx `json:"tx,omitempty"`
 }
 
-// kai: tx related typedefs
-
-// MsgClientTx is a {tx} message which represents client operation to a tx
+// kai: MsgClientTx is a {tx} message which represents client operation to a tx
 // depening on |what|, we either:
 // - initiate a tx (where we request to create a tx), or
 // - sends out a tx with signed bytes
@@ -238,6 +236,52 @@ type MsgClientTx struct {
 	Inputs []string `json:"inputs,omitempty"`
 	// value, optional for |get|, see MsgCall struct
 	Value int64 `json:"value,omitempty"`
+}
+
+// kai: MsgNewVote is a helper struct which wraps all the information needed to start a new vote
+type MsgNewVote struct {
+	// name of the vote, normally the text desc
+	Name string `json:"name"`
+	// duration of the vote, in seconds
+	Duration uint64 `json:"duration"`
+	// passrate of the vote, 0 - 100 int
+	PassRate uint64 `json:"passrate"`
+	// Voters list
+	Voters []string `json:"votes"`
+	// will this vote cause changes in smart contract?
+	IsContract bool `json:"iscontract"`
+	// the following is only valid if IsContract == true
+	// address of the contract
+	ConAddr string `json:"conaddr,omitempty"`
+	// function name
+	Fn string `json:fn,omitempty"`
+}
+
+// kai: MsgClientVote is a {vote} message which represents client operation to a vote
+type MsgClientVote struct {
+	// message ID
+	Id    string `json:"id,omitempty"`
+	// initiator of this vote
+	User string `json:"user"`
+	// in which topic the vote is held
+	// has to be group topic, and maximum 1 vote per group at the same time
+	Topic string `json:"topic"`
+	// name (text desc) of the vote
+	Name string `json:"name,omitempty"`
+	// What kind of the {vote} message, one of the following:
+	// new: starts a new vote
+	// vote: someone votes a ballot
+	// status: get status of the vote
+	// param: get parameter of the vote
+
+	// todo: define dedicated struct (currently only newVote gets one)
+	What string `json:"what"`
+
+	// needs to be provided if what == new
+	NewVote *MsgNewVote `json:"newvote,omitempty"`
+
+	// valid if what == vote, ballot of one vote,  0 = against, 1 = for, 2 = abstain
+	Ballot uint `json:"ballot"`
 }
 
 const (
@@ -367,6 +411,7 @@ type ClientComMessage struct {
 	Del   *MsgClientDel   `json:"del"`
 	Note  *MsgClientNote  `json:"note"`
 	Tx    *MsgClientTx    `json:"tx"`
+	Vote  *MsgClientVote  `json:"vote"`
 
 	// Message ID denormalized
 	id string
@@ -617,6 +662,16 @@ type MsgServerTxRes struct {
 
 	// if this tx is confirmed
 	Confirmed bool `json:"confirmed,omitempty"`
+}
+
+// kai: MsgServerVoteRes is the server-side reponse to client {vote} msg
+type MsgServerVoteRes struct {
+	Id    string `json:"id,omitempty"`
+	Topic string `json:"topic,omitempty"`
+	User string `json:"user,omitempty"`
+
+	What string `json:"what,omitempty"`
+
 }
 
 // ServerComMessage is a wrapper for server-side messages.
