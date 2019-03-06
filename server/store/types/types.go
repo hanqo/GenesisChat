@@ -796,6 +796,14 @@ type Topic struct {
 	// Deserialized ephemeral params
 	owner   Uid                  // first assigned owner
 	perUser map[Uid]*perUserData // deserialized from Subscription
+
+	// kai: some extra fields which have to be stored
+	ConAddr      string
+	VoteName     string
+	VotePassrate uint64
+	VoteDuration uint64
+	EntryCost    uint64
+	ExitCost     uint64
 }
 
 // GiveAccess updates access mode for the given user.

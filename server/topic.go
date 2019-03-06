@@ -99,9 +99,13 @@ type Topic struct {
 	// Flag which tells topic to stop acception requests: hub is in the process of shutting it down
 	suspended atomicBool
 
-	// kai: address of smart contract (if deployed)
-	// todo needs to be saved in DB
-	conAddr string
+	// kai: extra stuff for contract and vote, only valid for group topics
+	conAddr      string
+	voteName     string
+	votePassrate uint64
+	voteDuration uint64
+	entryCost    uint64
+	exitCost     uint64
 }
 
 type atomicBool int32
@@ -1253,6 +1257,16 @@ func (t *Topic) replyGetDesc(sess *Session, asUid types.Uid, id string, opts *Ms
 				Want:  pud.modeWant.String(),
 				Given: pud.modeGiven.String(),
 				Mode:  (pud.modeGiven & pud.modeWant).String()}
+		}
+
+		// kai: for group topics, retrieve the values
+		if t.cat == types.TopicCatGrp {
+			desc.ConAddr = t.conAddr
+			desc.VoteName = t.voteName
+			desc.VotePassrate = t.votePassrate
+			desc.VoteDuration = t.voteDuration
+			desc.EntryCost = t.entryCost
+			desc.ExitCost = t.exitCost
 		}
 
 		if t.cat == types.TopicCatGrp && (pud.modeGiven & pud.modeWant).IsPresencer() {

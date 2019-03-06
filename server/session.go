@@ -1340,6 +1340,18 @@ func createTxResMsg(m *bc.MsgFromChain, t, id, topic string, ts time.Time) (*Ser
 				return ErrInvalidContractAddr(id, topic, ts), errors.New("nil contract addr")
 			} else {
 				r.TxRes.ConAddr = *m.TxReceipt.ContractAddr
+				// store it to loaded topic
+				tt := globals.hub.topicGet(topic)
+				tt.conAddr = r.TxRes.ConAddr
+				// store it to DB
+				upd := make(map[string]interface{})
+				upd["ConAddr"] = r.TxRes.ConAddr
+				err := store.Topics.Update(topic, upd)
+
+				if err != nil {
+					log.Println("update DB failed")
+					return ErrFailedToUpdateDB(id, topic, ts), err
+				}
 			}
 		}
 		r.TxRes.What = "send"

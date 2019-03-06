@@ -14,7 +14,7 @@ service Plugin {
 	// processing is needed. The Tinode server will generate a {ctrl} message from the returned ServerCtrl 
 	// and forward it to the client session. 
 	// ServerCtrl.code equals to 0 instructs the server to continue with default processing of the client message.
-  	rpc FireHose(ClientReq) returns (ServerResp) {}
+	rpc FireHose(ClientReq) returns (ServerResp) {}
 	
 	// An alteranative user and topic discovery mechanism. 
 	// A search request issued on a 'fnd' topic. This method is called to generate an alternative result set.
@@ -94,6 +94,13 @@ message GetOpts {
 	int32 before_id = 5;
 	// Maximum number of results to return
 	int32 limit = 6;
+	// kai: contract and vote stuff
+	string con_addr = 7;
+	string vote_name = 8;
+	uint64 vote_passrate = 9;
+	uint64 vote_duration = 10;
+	uint64 entry_cost = 11;
+	uint64 exit_cost = 12;
 }
 
 message GetQuery {

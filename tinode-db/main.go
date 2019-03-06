@@ -24,15 +24,6 @@ type vCardy struct {
 	Fn    string `json:"fn"`
 	Photo string `json:"photo"`
 	Type  string `json:"type"`
-  // kai: UI needs more meta data
-  //      actually we just need it for group topics, but just to keep the changes as minor as possible
-  //      note: do not use omitempty here -- UI might assume all keys are available
-  GroupRuleName string `json:"groupRuleName"`
-  EconomicRule string `json:"economicRule"`
-  RequiredApproved float32 `json:"requiredApproved"`
-  RequiredHour float64 `json:"requiredHour"`
-  GroupWebsitePrefix string `json:"groupWebsitePrefix"`
-  VoteCost uint64 `json:"voteCost"`
 }
 
 type tPrivate struct {
@@ -96,6 +87,12 @@ type GroupTopic struct {
 	Access       DefAccess `json:"access"`
 	Tags         []string  `json:"tags"`
 	OwnerPrivate tPrivate  `json:"ownerPrivate"`
+	ConAddr      string    `json:"conaddr"`
+	VoteName     string    `json:"votename"`
+	VotePassrate uint64    `json:"votepassrate"`
+	VoteDuration uint64    `json:"voteduration"`
+	EntryCost    uint64    `json:"entrycost"`
+	ExitCost     uint64    `json:"exitcost"`
 }
 
 /*

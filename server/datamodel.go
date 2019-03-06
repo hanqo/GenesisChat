@@ -28,6 +28,16 @@ type MsgGetOpts struct {
 	BeforeId int `json:"before,omitempty"`
 	// Limit the number of messages loaded
 	Limit int `json:"limit,omitempty"`
+
+	// kai: extra entries for contract and vote stuff, valid only for group topics
+	//      current impl: these values could NOT be set by {set} msg directly.
+	//                    only by modifying contract or other msg like {tx}, {vote}
+	ConAddr      string `json:"conaddr"`
+	VoteName     string `json:"votename'`
+	VotePassrate uint64 `json:"votepassrate"`
+	VoteDuration uint64 `json:"voteduration"`
+	EntryCost    uint64 `json:"entrycost"`
+	ExitCost     uint64 `json:"exitcost"`
 }
 
 // MsgGetQuery is a topic metadata or data query.
@@ -413,6 +423,14 @@ type MsgTopicDesc struct {
 	Public interface{} `json:"public,omitempty"`
 	// Per-subscription private data
 	Private interface{} `json:"private,omitempty"`
+
+	// kai: extra entries for contract and vote stuff, valid only for group topics
+	ConAddr      string `json:"conaddr"`
+	VoteName     string `json:"votename'`
+	VotePassrate uint64 `json:"votepassrate"`
+	VoteDuration uint64 `json:"voteduration"`
+	EntryCost    uint64 `json:"entrycost"`
+	ExitCost     uint64 `json:"exitcost"`
 }
 
 // MsgTopicSub is topic subscription details, sent in Meta message.
@@ -1040,6 +1058,15 @@ func ErrInvalidTxGeneral(id, topic string, ts time.Time) *ServerComMessage {
 		Id:        id,
 		Code:      -106,
 		Text:      "invalid tx general (what or type)",
+		Topic:     topic,
+		Timestamp: ts}}
+}
+
+func ErrFailedToUpdateDB(id, topic string, ts time.Time) *ServerComMessage {
+	return &ServerComMessage{Ctrl: &MsgServerCtrl{
+		Id:        id,
+		Code:      -107,
+		Text:      "failed to update db",
 		Topic:     topic,
 		Timestamp: ts}}
 }
