@@ -12,10 +12,13 @@ import (
 	"log"
 	"math/big"
 	"testing"
+	"time"
+	"github.com/AfterworkBlockchain/GenesisChat/server/vote"
 )
-const addr = "0xb04b61254B42d64f17938E5DCe2eb728cAfF8937"
-const priv = "4b62386099abd28f2b63d3a08918cbffc72f4752e3a029747f2a4681b28021c7"
+const addr = "0x0693f75385fD3DDD8f893494AC34519d3E680BF5"
+const priv = "707affe0a00449a493c39082f1a9e3925ac150cac067b7a9f20c8e438e0dc0d4"
 const receiver = "0x218778aA387BCCD5167B6881B4Fc210f0ebFe5Ae"
+
 var chainID = big.NewInt(5777)
 
 func generateRawTxNaive(t *testing.T) string{
@@ -150,8 +153,100 @@ func deployContract(t *testing.T) *string{
 	}
 }
 
+func voteProcess(t *testing.T, contractAddr *string, funcName *string, voteNonce *string) *vote.MsgVoteResult{
+	v:= vote.NewVoteHandler()
+	v.ToVote <- &vote.MsgToVote{
+		Owner:"test_owner1",
+		Topic:"test_topic1",
+		Typ:"new_vote",
+		NewVote:&vote.MsgNewVote{
+			Proposal: &vote.MsgVoteProposal{"contract", nil,contractAddr,funcName, voteNonce},
+			Duration:10,
+			PassRate:33,
+			VoterList:[]string{"voter1","voter2","voter3","voter4","voter5"},},}
+
+	time.Sleep(time.Second * 1)
+
+	//Vote starts
+	v.ToVote <- &vote.MsgToVote{
+		Owner:"voter1",
+		Topic:"test_topic1",
+		Typ:"vote",
+		Ballot: &vote.MsgBallot{0},}
+	v.ToVote <- &vote.MsgToVote{
+		Owner:"voter2",
+		Topic:"test_topic1",
+		Typ:"vote",
+		Ballot: &vote.MsgBallot{2},}
+	v.ToVote <- &vote.MsgToVote{
+		Owner:"voter3",
+		Topic:"test_topic1",
+		Typ:"vote",
+		Ballot: &vote.MsgBallot{1},}
+	v.ToVote <- &vote.MsgToVote{
+		Owner:"voter4",
+		Topic:"test_topic1",
+		Typ:"vote",
+		Ballot: &vote.MsgBallot{1},}
+	time.Sleep(time.Second * 1)
+
+	//Request status of vote
+	v.ToVote <- &vote.MsgToVote{
+		Owner:"voter4",
+		Topic:"test_topic1",
+		Typ:"status",}
+
+	//Request paramter of vote
+	v.ToVote <- &vote.MsgToVote{
+		Owner:"voter5",
+		Topic:"test_topic1",
+		Typ:"parameter",}
+
+	time.Sleep(time.Second * 1)
+
+	for{
+		select {
+		case msg := <-v.FromVote:
+			if msg.Typ == "status"{
+				status := msg.Status
+				if len(status.ForList) != 2||
+					len(status.AgainstList) != 1 ||
+					len(status.AbstainedList) != 1 {
+					t.Error("The status of voting is not correct")
+				}
+
+			}else if msg.Typ== "result"{
+				fmt.Printf("result for topic %s is %v\n", msg.Topic, msg.Result.Value)
+				if msg.Topic != "test_topic1" ||
+					msg.Result.Value != true {
+					t.Error("Vote Result not correct")
+				}
+				return  msg.Result
+
+			}else if msg.Typ== "parameter"{
+				param:= msg.Param
+
+				if param.PassRate!=33||param.Duration!= 10||param.VoterSize!= 5{
+					t.Error("Vote Paramter not correct")
+				}
+			}
+		}
+	}
+}
+
 func setContract(t *testing.T, contractAddr *string) {
 	h := NewETHHandler()
+	funcName := "setCost"
+	voteNonce := "1"
+	res := voteProcess(t,contractAddr, &funcName, &voteNonce)
+
+	if res.Value != true{
+		t.Error("Proposal is not passed in vote")
+	}
+
+	input := []string{"500","600"}
+
+	input = append(input, *res.Proposal.Nonce, *res.Signature)
 	m := &MsgToChain{
 		From:    addr,
 		User:    "test1",
@@ -159,10 +254,11 @@ func setContract(t *testing.T, contractAddr *string) {
 		ChainID: 123,
 		Typ:     "request_tx",
 		RequestTx: &MsgContractFunc{
-			Function: "setEntryCost",
-			Inputs:   []string{"500"},},}
+			Function: funcName,
+			Inputs:   input,},}
 
 	h.ToChains <- m
+
 	for {
 		select {
 		case msg := <-h.FromChains:
@@ -183,7 +279,7 @@ func setContract(t *testing.T, contractAddr *string) {
 					SignedTx: &rawTxData3,}
 			}else if msg.TxReceipt != nil{
 				fmt.Printf("set tx Confirmed with hash: %s\n", msg.TxReceipt.TxHash)
-				t.Log("set tx Confirmed with gas used:", msg.TxReceipt.GasUsed)
+				t.Log("set tx confirmed with gas used:", msg.TxReceipt.GasUsed)
 				return
 			}
 
@@ -203,7 +299,7 @@ func callContract(t *testing.T, contractAddr *string) {
 		Call: &MsgCall{
 			ContractAddr: *contractAddr,
 			ContractFunc: MsgContractFunc{
-				Function: "getEntryCost",},
+				Function: "getCost",},
 		},}
 
 	h.ToChains <- m
@@ -213,7 +309,7 @@ func callContract(t *testing.T, contractAddr *string) {
 			if msg.CallReturn != nil {
 				t.Log("call return From address:", msg.CallReturn.ContractAddr)
 				t.Log("call return of function: ", msg.CallReturn.Function)
-				fmt.Printf("call return with output: %s\n", msg.CallReturn.Output)
+				fmt.Printf("call return with output: %v\n", msg.CallReturn.Output)
 				return
 			}
 		}

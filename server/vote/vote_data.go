@@ -47,11 +47,11 @@ type MsgVoteCurrentParam struct {
 }
 
 type MsgVoteProposal struct {
-	Typ  			string
-	Data 			interface{}
-	ContractAddr 	*string
-	FuncName 		*string
-	Nonce	  		*int64
+	Typ          string
+	Data         interface{}
+	ContractAddr *string
+	FuncName     *string
+	Nonce        *string
 }
 
 type MsgVoteResult struct {

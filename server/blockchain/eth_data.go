@@ -6,8 +6,10 @@ type MsgToChain struct {
 	User    string
 	Version string
 	ChainID int32
+
 	MessageID string
 	SessionID string
+
 	Typ     string
 
 	SignedTx  *string

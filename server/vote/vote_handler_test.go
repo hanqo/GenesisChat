@@ -8,7 +8,7 @@ import (
 
 func TestVoteHandler1(t *testing.T){
 	v:= NewVoteHandler()
-	nonce := int64(0)
+	nonce := "0"
 	v.ToVote <- &MsgToVote{
 		Owner:"test_owner1",
 		Topic:"test_topic1",
@@ -92,13 +92,12 @@ func TestVoteHandler1(t *testing.T){
 func TestVoteHandler2(t *testing.T){
 	v:= NewVoteHandler()
 	resultCnt := 0
-	nonce := int64(0)
 	v.ToVote <- &MsgToVote{
 		Owner:"test_owner1",
 		Topic:"test_topic1",
 		Typ:"new_vote",
 		NewVote:&MsgNewVote{
-			Proposal: &MsgVoteProposal{"test", nil,nil,nil, &nonce},
+			Proposal: &MsgVoteProposal{"test", nil,nil,nil, nil},
 			Duration:10,
 			PassRate:33,
 			VoterList:[]string{"voter1","voter2","voter3","voter4","voter5"},},}
@@ -108,7 +107,7 @@ func TestVoteHandler2(t *testing.T){
 		Topic:"test_topic2",
 		Typ:"new_vote",
 		NewVote:&MsgNewVote{
-			Proposal: &MsgVoteProposal{"test", nil,nil,nil, &nonce},
+			Proposal: &MsgVoteProposal{"test", nil,nil,nil, nil},
 			Duration:10,
 			PassRate:33,
 			VoterList:[]string{"voter5","voter6","voter7","voter8","voter9"},},}

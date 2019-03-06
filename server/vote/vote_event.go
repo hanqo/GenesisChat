@@ -5,7 +5,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/miguelmota/go-solidity-sha3"
 	"log"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -168,12 +167,11 @@ func (e *VoteEvent) timeOut() {
 }
 
 func (e *VoteEvent) signVote() string{
-	nonce := strconv.FormatInt(*e.Proposal.Nonce,10)
 
 	hash:= solsha3.SoliditySHA3(
 		solsha3.Address(*e.Proposal.ContractAddr),  //MUST use * here !!!!
 		solsha3.String(*e.Proposal.FuncName),
-		solsha3.Uint256(nonce),
+		solsha3.Uint256(*e.Proposal.Nonce),
 	)
 	hash = solsha3.SoliditySHA3WithPrefix(hash)
 	privateKey, _ := crypto.HexToECDSA(priv)
