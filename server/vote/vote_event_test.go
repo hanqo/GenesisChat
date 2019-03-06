@@ -12,10 +12,10 @@ func TestVoteEvent(t *testing.T) {
 	resultVote := make(chan *MsgVoteResult, 1)
 	voterList := []string{"voter1", "voter2", "voter3", "voter4", "voter5", "voter6", "voter7", "voter8", "voter9", "voter10"}
 
-	nonce := int64(1)
 	funcName := string("setCost")
 	contracAddr := "0xf4B256427DEd7eaE62040b13684ba7487c0a1825"
 
+	nonce := "1"
 	fmt.Printf("Create voting event\n")
 	event := NewVoteEvent(
 		"test_owner",
@@ -63,20 +63,27 @@ func TestVoteEvent(t *testing.T) {
 		t.Error("The result of voting is not correct")
 	}
 
-	t.Log("Abstained Name List")
+	fmt.Printf("Abstained Name List\n")
 	for _, item := range status.AbstainedList {
-		t.Log(item)
+		fmt.Printf(item)
+		fmt.Printf(" ")
 	}
+	fmt.Printf("\n")
 
-	t.Log("Against Name List")
+	fmt.Printf("Against Name List\n")
 	for _, item := range status.AgainstList {
-		t.Log(item)
+		fmt.Printf(item)
+		fmt.Printf(" ")
 	}
+	fmt.Printf("\n")
 
-	t.Log("For Name List")
+	fmt.Printf("For Name List\n")
 	for _, item := range status.ForList {
-		t.Log(item)
+		fmt.Printf(item)
+		fmt.Printf(" ")
 	}
+	fmt.Printf("\n")
+
 	fmt.Printf("Start time in %s\n", status.Start)
 	fmt.Printf("Expire time in %s\n", status.Expires)
 

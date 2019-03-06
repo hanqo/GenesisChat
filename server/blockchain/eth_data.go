@@ -2,13 +2,15 @@ package blockchain
 
 // messages and the wrapper send To block chain.
 type MsgToChain struct {
-	From      string
-	User      string
-	Version   string
-	ChainID   int32
+	From    string
+	User    string
+	Version string
+	ChainID int32
+
 	MessageID string
 	SessionID string
-	Typ       string
+
+	Typ     string
 
 	SignedTx  *string
 	RequestTx *MsgContractFunc

@@ -5,13 +5,12 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/miguelmota/go-solidity-sha3"
 	"log"
-	"strconv"
 	"sync"
 	"time"
 )
 
-const priv = "4b62386099abd28f2b63d3a08918cbffc72f4752e3a029747f2a4681b28021c7"
-const addr = "0xb04b61254B42d64f17938E5DCe2eb728cAfF8937"
+const priv = "40A62B5FBDE35BAAAE1CDF6AE149AD72CF182D09876F454A9B753927912D0108"
+const addr = "0x564F0D7C4456950dd5c0cc47E6fA330321951806"
 
 type VoteEvent struct {
 	Owner string
@@ -167,12 +166,11 @@ func (e *VoteEvent) timeOut() {
 }
 
 func (e *VoteEvent) signVote() string{
-	nonce := strconv.FormatInt(*e.Proposal.Nonce,10)
 
 	hash:= solsha3.SoliditySHA3(
 		solsha3.Address(*e.Proposal.ContractAddr),  //MUST use * here !!!!
 		solsha3.String(*e.Proposal.FuncName),
-		solsha3.Uint256(nonce),
+		solsha3.Uint256(*e.Proposal.Nonce),
 	)
 	hash = solsha3.SoliditySHA3WithPrefix(hash)
 	privateKey, _ := crypto.HexToECDSA(priv)
