@@ -17,6 +17,7 @@ import (
 //TODO(xrisheng):move config To config file.
 //TODO(xrisheng):eth event handler
 const ethRPCAddr = "https://ropsten.infura.io/v3/0d516dfa7a53437c8be98daa8a7dcfe3"
+
 //var ethRPCAddr = "http://127.0.0.1:7545"
 
 type ETHHandler struct {
@@ -67,19 +68,19 @@ func (h *ETHHandler) poll() {
 
 				if ret != nil {
 					m := &MsgFromChain{
-						To:      h.pendings[i].From,
-						User:    h.pendings[i].User,
-						Version: h.pendings[i].Version,
-						ChainID: h.pendings[i].ChainID,
-						MessageID:h.pendings[i].MessageID,
-						SessionID:h.pendings[i].SessionID,
-						Typ:     "tx_receipt",
+						To:        h.pendings[i].From,
+						User:      h.pendings[i].User,
+						Version:   h.pendings[i].Version,
+						ChainID:   h.pendings[i].ChainID,
+						MessageID: h.pendings[i].MessageID,
+						SessionID: h.pendings[i].SessionID,
+						Typ:       "tx_receipt",
 
 						TxReceipt: &MsgTxReceipt{
 							Confirmed: true,
 							TxHash:    h.pendings[i].TxHash,
 							GasUsed:   ret.GasUsed,
-						},}
+						}}
 					s := ret.ContractAddress.String()
 					if len(s) > 0 {
 						m.TxReceipt.ContractAddr = &s
@@ -169,29 +170,29 @@ func (h *ETHHandler) sendSignedTx(r *MsgToChain) {
 	}
 
 	h.add <- TxPending{
-		From:    r.From,
-		User:    r.User,
-		Version: r.Version,
-		ChainID: r.ChainID,
-		MessageID:r.MessageID,
-		SessionID:r.SessionID,
-		TxHash:  tx.Hash().String(),
+		From:      r.From,
+		User:      r.User,
+		Version:   r.Version,
+		ChainID:   r.ChainID,
+		MessageID: r.MessageID,
+		SessionID: r.SessionID,
+		TxHash:    tx.Hash().String(),
 	}
 
 	h.FromChains <- &MsgFromChain{
-		To:      r.From,
-		User:    r.User,
-		Version: r.Version,
-		ChainID: r.ChainID,
-		MessageID:r.MessageID,
-		SessionID:r.SessionID,
-		Typ:     "tx_sent",
+		To:        r.From,
+		User:      r.User,
+		Version:   r.Version,
+		ChainID:   r.ChainID,
+		MessageID: r.MessageID,
+		SessionID: r.SessionID,
+		Typ:       "tx_sent",
 		TxSent: &MsgTxSent{
 			TxHash:       tx.Hash().String(),
 			GasPrice:     tx.GasPrice().Int64(),
 			Nonce:        tx.Nonce(),
 			GasEstimated: est,
-		},}
+		}}
 }
 
 func (h *ETHHandler) generateTxInfo(r *MsgToChain) {
@@ -226,7 +227,7 @@ func (h *ETHHandler) generateTxInfo(r *MsgToChain) {
 			Nonce:    uint64(nonce),
 			Data:     txData,
 			GasLimit: uint64(1000000),
-		},}
+		}}
 }
 
 func (h *ETHHandler) callContract(r *MsgToChain) {
@@ -264,13 +265,13 @@ func (h *ETHHandler) callContract(r *MsgToChain) {
 	retStr, err := h.abi.unpackContractFunc(returnByte, r.Call.ContractFunc.Function)
 
 	h.FromChains <- &MsgFromChain{
-		To:      r.From,
-		User:    r.User,
-		Version: r.Version,
-		ChainID: r.ChainID,
-		MessageID:r.MessageID,
-		SessionID:r.SessionID,
-		Typ:     "call_return",
+		To:        r.From,
+		User:      r.User,
+		Version:   r.Version,
+		ChainID:   r.ChainID,
+		MessageID: r.MessageID,
+		SessionID: r.SessionID,
+		Typ:       "call_return",
 
 		CallReturn: &MsgCallReturn{
 			Function:     r.Call.ContractFunc.Function,

@@ -20,7 +20,7 @@ type MsgFromVote struct {
 }
 
 type MsgNewVote struct {
-	Proposal  *MsgVoteProposal
+	Proposal *MsgVoteProposal
 
 	Duration  uint
 	PassRate  uint
@@ -58,8 +58,8 @@ type MsgVoteResult struct {
 	Topic string
 	Value bool
 
-	Proposal  		*MsgVoteProposal
-	FinalStatus 	*MsgVoteStatus
-	FinalParam   	*MsgVoteCurrentParam
-	Signature 		*string
+	Proposal    *MsgVoteProposal
+	FinalStatus *MsgVoteStatus
+	FinalParam  *MsgVoteCurrentParam
+	Signature   *string
 }

@@ -10,7 +10,7 @@ type MsgToChain struct {
 	MessageID string
 	SessionID string
 
-	Typ     string
+	Typ string
 
 	SignedTx  *string
 	RequestTx *MsgContractFunc
@@ -20,7 +20,7 @@ type MsgToChain struct {
 type MsgCall struct {
 	ContractAddr string
 	ContractFunc MsgContractFunc
-	Value        *int64  //money want to pay during call
+	Value        *int64 //money want to pay during call
 }
 
 type MsgContractFunc struct {
@@ -30,13 +30,13 @@ type MsgContractFunc struct {
 
 // messages and the wrapper send From block chain
 type MsgFromChain struct {
-	To      string
-	User    string
-	Version string
-	ChainID int32
+	To        string
+	User      string
+	Version   string
+	ChainID   int32
 	MessageID string
 	SessionID string
-	Typ     string
+	Typ       string
 
 	TxReceipt  *MsgTxReceipt
 	TxSent     *MsgTxSent
@@ -72,10 +72,10 @@ type MsgTxInfo struct {
 }
 
 type TxPending struct {
-	From    string
-	User    string
-	Version string
-	ChainID int32
+	From      string
+	User      string
+	Version   string
+	ChainID   int32
 	MessageID string
 	SessionID string
 
