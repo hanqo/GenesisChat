@@ -1525,7 +1525,7 @@ func conSub(s *Session, msg *ClientComMessage, subName string, isNewTopic bool, 
 			msg.Sub.Set.Desc.ConAddr = *conaddr
 		} else {
 			a := globals.hub.topicGet(msg.topic).conAddr
-			txhash = bc.SetContractTestMode(&a)
+			txhash = bc.SetContractTestMode(&a, "join", []string{})
 		}
 
 		// return a txres: tx confirmed
