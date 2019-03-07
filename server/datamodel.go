@@ -670,11 +670,11 @@ type MsgServerTxRes struct {
 
 	// see MsgTxInfo struct
 	// the gas price
-	GasPrice int64 `json:"gasprice,omitempty"`
+	GasPrice int64 `json:"gasprice"`
 	// the gas limit
-	GasLimit uint64 `json:"gaslimit,omitempty"`
+	GasLimit uint64 `json:"gaslimit"`
 	// nonce
-	Nonce uint64 `json:"nonce,omitempty"`
+	Nonce uint64 `json:"nonce"`
 	// data from binded contract, only valid for 'depcon' and 'setcon'
 	Data []byte `json:"data,omitempty"`
 
@@ -682,7 +682,7 @@ type MsgServerTxRes struct {
 	// the tx hash if any
 	TxHash string `json:"txhash,omitempty"`
 	// the estimated gas amount
-	GasEstimated uint64 `json:"gasestimated,omitempty"`
+	GasEstimated uint64 `json:"gasestimated"`
 
 	// see MsgTxReceipt struct
 	// acutal used gas amount
