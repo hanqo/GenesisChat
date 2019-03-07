@@ -171,8 +171,7 @@ type MsgClientSub struct {
 	// mirrors {get}
 	Get *MsgGetQuery `json:"get,omitempty"`
 
-	// kai: optional {tx}
-	//      used to deploy or set contract when the user creates or joins group topic
+	// kai: optional {tx}, used to deploy or set contract when the user creates or joins group topic
 	Tx *MsgClientTx `json:"tx,omitempty"`
 }
 
@@ -240,12 +239,10 @@ type MsgClientTx struct {
 
 // kai: MsgNewVote is a helper struct which wraps all the information needed to start a new vote
 type MsgNewVote struct {
-	// name of the vote, normally the text desc
-	Name string `json:"name"`
 	// duration of the vote, in seconds
 	Duration uint64 `json:"duration"`
 	// passrate of the vote, 0 - 100 int
-	PassRate uint64 `json:"passrate"`
+	Passrate uint64 `json:"passrate"`
 	// Voters list
 	Voters []string `json:"votes"`
 	// will this vote cause changes in smart contract?
@@ -257,31 +254,66 @@ type MsgNewVote struct {
 	Fn string `json:fn,omitempty"`
 }
 
+// kai: MsgVoteAction is a vote action which indicates which action has to be executed if the vote past
+// todo: this struct needs to be re-designed
+type MsgVoteAction struct {
+	// what, one of the following: set (todo)
+	What string `json:"what,omitempty"`
+	// Parameter to be changed
+	Param string `json:"param,omitempty"`
+	// the set value
+	Value *string `json:"value,omitempty"`
+	// the attached tx
+	Tx *MsgClientTx `json:"tx,omitempty"`
+}
+
 // kai: MsgClientVote is a {vote} message which represents client operation to a vote
+// current workflow (needs to be refined later):
+// 1. UI initiates a vote sending (UI has to know the action if the vote succeeds):
+//    vote: { what: "new", newvote: {...}}
+// 2. server starts the vote and timer
+// 3. (could be multiple times) once some user votes something, UI sends:
+//    vote: { what: "vote", ballot: 0, ..}
+// 4. (optional) UI could query the status or params of the vote anytime
+// 5. once the result has a result (past or failed), server will send a {voteres} msg back
+//    indicating the result, and other necessary paramters in case the vote has past and a contract
+//    modification has to take place
+// 6. UI uses the info to create a tx , sign it and wrap it with an action message and sends to server.
+//    e.g. for setting the entrycost:
+//    vote: { id: "xxx",
+//            user: "xxx",
+//            topic: "xxx",
+//            what: "action",
+//            action: { what: "set", param: "entrycost", value: "500", tx: {what:"send", type:"setcon", ....}}}
+// 7. see txres section, server replies with 2 {txres} msg indicating tx was sent and confirmed resp.
 type MsgClientVote struct {
 	// message ID
-	Id    string `json:"id,omitempty"`
+	Id string `json:"id,omitempty"`
 	// initiator of this vote
 	User string `json:"user"`
 	// in which topic the vote is held
 	// has to be group topic, and maximum 1 vote per group at the same time
 	Topic string `json:"topic"`
-	// name (text desc) of the vote
+	// name (text desc) of the vote, e.g. "Set entry cost to 500"
 	Name string `json:"name,omitempty"`
 	// What kind of the {vote} message, one of the following:
 	// new: starts a new vote
 	// vote: someone votes a ballot
 	// status: get status of the vote
 	// param: get parameter of the vote
+	// action:the vote has past, what action to perform
 
 	// todo: define dedicated struct (currently only newVote gets one)
 	What string `json:"what"`
 
-	// needs to be provided if what == new
+	// valid if what == new
 	NewVote *MsgNewVote `json:"newvote,omitempty"`
 
 	// valid if what == vote, ballot of one vote,  0 = against, 1 = for, 2 = abstain
-	Ballot uint `json:"ballot"`
+	Ballot uint32 `json:"ballot"`
+
+	// valid if what == action
+	Action *MsgVoteAction `json:"voteaction,omitempty"`
 }
 
 const (
@@ -636,17 +668,21 @@ type MsgServerTxRes struct {
 	User string `json:"user,omitempty"`
 	To   string `json:"to,omitempty"`
 
+	// see MsgTxInfo struct
+	// the gas price
+	GasPrice int64 `json:"gasprice,omitempty"`
+	// the gas limit
+	GasLimit uint64 `json:"gaslimit,omitempty"`
+	// nonce
+	Nonce uint64 `json:"nonce,omitempty"`
+	// data from binded contract, only valid for 'depcon' and 'setcon'
+	Data []byte `json:"data,omitempty"`
+
 	// see MsgTxSent struct
 	// the tx hash if any
 	TxHash string `json:"txhash,omitempty"`
-	// the gas price
-	GasPrice int64 `json:"gasprice,omitempty"`
-	// nonce
-	Nonce uint64 `json:"nonce,omitempty"`
 	// the estimated gas amount
 	GasEstimated uint64 `json:"gasestimated,omitempty"`
-	// data from binded contract, only valid for 'depcon' and 'setcon'
-	Data []byte `json:"data,omitempty"`
 
 	// see MsgTxReceipt struct
 	// acutal used gas amount
@@ -668,20 +704,53 @@ type MsgServerTxRes struct {
 type MsgServerVoteRes struct {
 	Id    string `json:"id,omitempty"`
 	Topic string `json:"topic,omitempty"`
-	User string `json:"user,omitempty"`
+	User  string `json:"user,omitempty"`
 
+	// one of the following:
+	// status: see above
+	// param: see above
+	// result: final result
 	What string `json:"what,omitempty"`
 
+	// the following is valid when what == status or result
+	ForList       []string `json:"forlist,omitempty"`
+	AgainstList   []string `json:"againstlist,omitempty"`
+	AbstainedList []string `json:"abstainedlist,omitempty"`
+	// start time of the vote, in string
+	Start string `json:"start"`
+	// end time of the vote, in string
+	End string `json:"end"`
+
+	// the following is valid when what == param or result
+	Duration uint64 `json:"duration"`
+	Passrate uint64 `json:"passrate"`
+	// total number of votes
+	VoterSize uint64 `json:"votersize"`
+
+	// the following is only valid when what == result
+	// whether the vote has passed
+	Value bool `json:"value"`
+	// used for creating a tx for UI
+	Data []byte `json:"data"`
+	// mirrors MsgNewVote
+	IsContract bool   `json:"iscontract"`
+	ConAddr    string `json:"conaddr,omitempty"`
+	Fn         string `json:fn,omitempty"`
+	// mirrors txres
+	GasPrice int64  `json:"gasprice,omitempty"`
+	GasLimit uint64 `json:"gaslimit,omitempty"`
+	Nonce    uint64 `json:"nonce,omitempty"`
 }
 
 // ServerComMessage is a wrapper for server-side messages.
 type ServerComMessage struct {
-	Ctrl  *MsgServerCtrl  `json:"ctrl,omitempty"`
-	Data  *MsgServerData  `json:"data,omitempty"`
-	Meta  *MsgServerMeta  `json:"meta,omitempty"`
-	Pres  *MsgServerPres  `json:"pres,omitempty"`
-	Info  *MsgServerInfo  `json:"info,omitempty"`
-	TxRes *MsgServerTxRes `json:"txres,omitempty"`
+	Ctrl    *MsgServerCtrl    `json:"ctrl,omitempty"`
+	Data    *MsgServerData    `json:"data,omitempty"`
+	Meta    *MsgServerMeta    `json:"meta,omitempty"`
+	Pres    *MsgServerPres    `json:"pres,omitempty"`
+	Info    *MsgServerInfo    `json:"info,omitempty"`
+	TxRes   *MsgServerTxRes   `json:"txres,omitempty"`
+	VoteRes *MsgServerVoteRes `json:"voteres,omitempty"`
 
 	// MsgServerData has no Id field, copying it here for use in {ctrl} aknowledgements
 	id string

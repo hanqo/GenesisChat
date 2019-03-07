@@ -280,6 +280,36 @@ message ClientTx {
 	int64 value = 13;
 }
 
+// kai: NewVote a helper struct which wraps all the information needed to start a new vote
+message NewVote {
+	uint64 duration = 1;
+	uint64 passrate = 2;
+	repeated string voters = 3;
+	bool is_contract = 4;
+	string con_addr = 5;
+	string fn = 6;
+}
+
+// kai: VoteAction is a vote action which indicates which action has to be executed if the vote past
+message VoteAction {
+	string what = 1;
+	string param = 2;
+	string value = 3;
+	ClientTx tx = 4;
+}
+
+// kai: ClientVote is a client-genreated msg to initiate or update vote
+message ClientVote {
+	string id = 1;
+	string user = 2;
+	string topic = 3;
+	string name = 4;
+	string what = 5;
+	NewVote newvote = 6;
+	uint32 ballot = 7;
+	VoteAction action = 8;
+}
+
 message ClientMsg {
 	oneof Message {
 		ClientHi hi = 1;
@@ -293,6 +323,7 @@ message ClientMsg {
 		ClientDel del = 9;
 		ClientNote note = 10;
 		ClientTx tx = 11;
+		ClientTx vote = 12;
 	}
 	// Root user may send messages on behalf of other users.
 	string on_behalf_of = 15;
@@ -433,16 +464,40 @@ message ServerTxRes {
 	string topic = 4;
 	string user = 5;
 	string to = 6;
-	string tx_hash = 7;
-	int64 gas_price = 8;
+	int64 gas_price = 7;
+	uint64 gas_limit = 8;
 	uint64 nonce = 9;
-	uint64 gas_estimated = 10;
-	bytes data = 11;
-	uint64 gas_used = 12;
-	string con_addr = 13;
-	string fn = 14;
-	repeated string output = 15;
-	bool confirmed = 16;
+	bytes data = 10;
+	string tx_hash = 11;
+	uint64 gas_estimated = 12;
+	uint64 gas_used = 13;
+	string con_addr = 14;
+	string fn = 15;
+	repeated string output = 16;
+	bool confirmed = 17;
+}
+
+message ServerVoteRes {
+	string id = 1;
+	string topic = 2;
+	string user = 3;
+	string what = 4;
+	repeated string for_list = 5;
+	repeated string against_list = 6;
+	repeated string abstained_list = 7;
+	string start = 8;
+	string end = 9;
+	uint64 duration = 10;
+	uint64 passrate = 11;
+	uint64 voter_size = 12;
+	bool value = 13;
+	bytes data = 14;
+	bool is_contract = 15;
+	string con_addr = 16;
+	string fn = 17;
+	int64 gas_price = 18;
+	uint64 gas_limit = 19;
+	uint64 nonce = 20;
 }
 
 // Cumulative message
@@ -454,6 +509,7 @@ message ServerMsg {
 		ServerMeta meta = 4;
 		ServerInfo info = 5;
 		ServerTxRes tx_res = 6;
+		ServerVoteRes vote_res = 7;
 	}
 	// When response is sent to Root, send internal topic name too.
 	string topic = 10;

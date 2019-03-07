@@ -1322,6 +1322,7 @@ func createTxResMsg(m *bc.MsgFromChain, t, id, topic string, ts time.Time) (*Ser
 		}
 		r.TxRes.What = "init"
 		r.TxRes.GasPrice = m.TxInfo.GasPrice
+		r.TxRes.GasLimit = m.TxInfo.GasLimit
 		r.TxRes.Nonce = m.TxInfo.Nonce
 		r.TxRes.Data = m.TxInfo.Data
 		r.TxRes.Fn = m.TxInfo.Function
