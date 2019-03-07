@@ -262,7 +262,7 @@ type MsgVoteAction struct {
 	// Parameter to be changed
 	Param string `json:"param,omitempty"`
 	// the set value
-	Value *string `json:"value,omitempty"`
+	Value string `json:"value,omitempty"`
 	// the attached tx
 	Tx *MsgClientTx `json:"tx,omitempty"`
 }

@@ -305,7 +305,7 @@ message ClientVote {
 	string topic = 3;
 	string name = 4;
 	string what = 5;
-	NewVote newvote = 6;
+	NewVote new_vote = 6;
 	uint32 ballot = 7;
 	VoteAction action = 8;
 }
@@ -323,7 +323,7 @@ message ClientMsg {
 		ClientDel del = 9;
 		ClientNote note = 10;
 		ClientTx tx = 11;
-		ClientTx vote = 12;
+		ClientVote vote = 12;
 	}
 	// Root user may send messages on behalf of other users.
 	string on_behalf_of = 15;
@@ -477,6 +477,7 @@ message ServerTxRes {
 	bool confirmed = 17;
 }
 
+// {voteres} message
 message ServerVoteRes {
 	string id = 1;
 	string topic = 2;

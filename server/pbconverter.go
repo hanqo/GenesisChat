@@ -120,6 +120,31 @@ func pbServTxResSerialize(txres *MsgServerTxRes) *pbx.ServerMsg_TxRes {
 	}}
 }
 
+func pbServVoteResSerialize(voteres *MsgServerVoteRes) *pbx.ServerMsg_VoteRes {
+	return &pbx.ServerMsg_VoteRes{VoteRes: &pbx.ServerVoteRes{
+		Id:            voteres.Id,
+		Topic:         voteres.Topic,
+		User:          voteres.User,
+		What:          voteres.What,
+		ForList:       voteres.ForList,
+		AgainstList:   voteres.AgainstList,
+		AbstainedList: voteres.AbstainedList,
+		Start:         voteres.Start,
+		End:           voteres.End,
+		Duration:      voteres.Duration,
+		Passrate:      voteres.Passrate,
+		VoterSize:     voteres.VoterSize,
+		Value:         voteres.Value,
+		Data:          voteres.Data,
+		IsContract:    voteres.IsContract,
+		ConAddr:       voteres.ConAddr,
+		Fn:            voteres.Fn,
+		GasPrice:      voteres.GasPrice,
+		GasLimit:      voteres.GasLimit,
+		Nonce:         voteres.Nonce,
+	}}
+}
+
 // Convert ServerComMessage to pbx.ServerMsg
 func pbServSerialize(msg *ServerComMessage) *pbx.ServerMsg {
 	var pkt pbx.ServerMsg
@@ -137,6 +162,8 @@ func pbServSerialize(msg *ServerComMessage) *pbx.ServerMsg {
 		pkt.Message = pbServMetaSerialize(msg.Meta)
 	case msg.TxRes != nil:
 		pkt.Message = pbServTxResSerialize(msg.TxRes)
+	case msg.VoteRes != nil:
+		pkt.Message = pbServVoteResSerialize(msg.VoteRes)
 	}
 
 	pkt.Topic = msg.rcptto
@@ -236,6 +263,29 @@ func pbServDeserialize(pkt *pbx.ServerMsg) *ServerComMessage {
 			Output:       txres.GetOutput(),
 			Confirmed:    txres.GetConfirmed(),
 		}
+	} else if voteres := pkt.GetVoteRes(); voteres != nil {
+		msg.VoteRes = &MsgServerVoteRes{
+			Id:            voteres.GetId(),
+			Topic:         voteres.GetTopic(),
+			User:          voteres.GetUser(),
+			What:          voteres.GetWhat(),
+			ForList:       voteres.GetForList(),
+			AgainstList:   voteres.GetAgainstList(),
+			AbstainedList: voteres.GetAbstainedList(),
+			Start:         voteres.GetStart(),
+			End:           voteres.GetEnd(),
+			Duration:      voteres.GetDuration(),
+			Passrate:      voteres.GetPassrate(),
+			VoterSize:     voteres.GetVoterSize(),
+			Value:         voteres.GetValue(),
+			Data:          voteres.GetData(),
+			IsContract:    voteres.GetIsContract(),
+			ConAddr:       voteres.GetConAddr(),
+			Fn:            voteres.GetFn(),
+			GasPrice:      voteres.GetGasPrice(),
+			GasLimit:      voteres.GetGasLimit(),
+			Nonce:         voteres.GetNonce(),
+		}
 	}
 	return &msg
 }
@@ -324,6 +374,16 @@ func pbCliSerialize(msg *ClientComMessage) *pbx.ClientMsg {
 			SeqId: int32(msg.Note.SeqId)}}
 	case msg.Tx != nil:
 		pkt.Message = &pbx.ClientMsg_Tx{Tx: pbTxSerialize(msg.Tx)}
+	case msg.Vote != nil:
+		pkt.Message = &pbx.ClientMsg_Vote{Vote: &pbx.ClientVote{
+			Id:      msg.Vote.Id,
+			User:    msg.Vote.User,
+			Topic:   msg.Vote.Topic,
+			Name:    msg.Vote.Name,
+			What:    msg.Vote.What,
+			NewVote: pbNewVoteSerialize(msg.Vote.NewVote),
+			Ballot:  msg.Vote.Ballot,
+			Action:  pbVoteActionSerialize(msg.Vote.Action)}}
 	}
 
 	if pkt.Message == nil {
@@ -432,6 +492,17 @@ func pbCliDeserialize(pkt *pbx.ClientMsg) *ClientComMessage {
 		}
 	} else if tx := pkt.GetTx(); tx != nil {
 		msg.Tx = pbTxDeserialize(tx)
+	} else if vote := pkt.GetVote(); vote != nil {
+		msg.Vote = &MsgClientVote{
+			Id:      vote.GetId(),
+			User:    vote.GetUser(),
+			Topic:   vote.GetTopic(),
+			Name:    vote.GetName(),
+			What:    vote.GetWhat(),
+			NewVote: pbNewVoteDeSerialize(vote.GetNewVote()),
+			Ballot:  vote.GetBallot(),
+			Action:  pbVoteActionDeserialize(vote.GetAction()),
+		}
 	}
 
 	msg.from = pkt.GetOnBehalfOf()
@@ -986,5 +1057,62 @@ func pbTxDeserialize(in *pbx.ClientTx) *MsgClientTx {
 		Fn:       in.GetFn(),
 		Inputs:   in.GetInputs(),
 		Value:    in.GetValue(),
+	}
+}
+
+// kai: helper function to serialize and deserialize {vote}
+func pbNewVoteSerialize(in *MsgNewVote) *pbx.NewVote {
+	if in == nil {
+		return nil
+	}
+
+	return &pbx.NewVote{
+		Duration:   in.Duration,
+		Passrate:   in.Passrate,
+		Voters:     in.Voters,
+		IsContract: in.IsContract,
+		ConAddr:    in.ConAddr,
+		Fn:         in.Fn,
+	}
+}
+
+func pbNewVoteDeSerialize(in *pbx.NewVote) *MsgNewVote {
+	if in == nil {
+		return nil
+	}
+
+	return &MsgNewVote{
+		Duration:   in.GetDuration(),
+		Passrate:   in.GetPassrate(),
+		Voters:     in.GetVoters(),
+		IsContract: in.GetIsContract(),
+		ConAddr:    in.GetConAddr(),
+		Fn:         in.GetFn(),
+	}
+}
+
+func pbVoteActionSerialize(in *MsgVoteAction) *pbx.VoteAction {
+	if in == nil {
+		return nil
+	}
+
+	return &pbx.VoteAction{
+		What:  in.What,
+		Param: in.Param,
+		Value: in.Value,
+		Tx:    pbTxSerialize(in.Tx),
+	}
+}
+
+func pbVoteActionDeserialize(in *pbx.VoteAction) *MsgVoteAction {
+	if in == nil {
+		return nil
+	}
+
+	return &MsgVoteAction{
+		What:  in.GetWhat(),
+		Param: in.GetParam(),
+		Value: in.GetValue(),
+		Tx:    pbTxDeserialize(in.GetTx()),
 	}
 }
