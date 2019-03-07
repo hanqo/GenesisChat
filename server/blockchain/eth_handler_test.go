@@ -16,8 +16,12 @@ import (
 	"time"
 )
 
-const addr = "0xb66785f087B0A100c39c39B801104D22086FF1bE"
-const priv = "E9A6D816389523F51B7CB44EB16CD661050F6F85B4268D452E4745B74619F1D2"
+const creatorAddr = "0xb66785f087B0A100c39c39B801104D22086FF1bE"
+const creatorPriv = "E9A6D816389523F51B7CB44EB16CD661050F6F85B4268D452E4745B74619F1D2"
+
+const candidateAddr = "0x4515CEd5652a3a823cb2d4304fc3ACCEF1293Cdf"
+const candidatePriv = "AB45F4DF1DF0FCAEEB6464D7A62BE84E39656F0E87DA26E3D9F5562C229324E9"
+
 const receiver = "0xb66785f087B0A100c39c39B801104D22086FF1bE"
 
 //var chainID = big.NewInt(3) //ropsten
@@ -29,7 +33,7 @@ func generateRawTxNaive(t *testing.T) string {
 		log.Fatal(err)
 	}
 
-	privateKey, _ := crypto.HexToECDSA(priv)
+	privateKey, _ := crypto.HexToECDSA(creatorPriv)
 	recipientAddr := common.HexToAddress(receiver)
 	amount := big.NewInt(1000000000000) // 0.01ether
 	gasLimit := uint64(100000)
@@ -60,7 +64,7 @@ func generateRawTxNaive(t *testing.T) string {
 
 func generateRawTxDeployContract(t *testing.T, gas uint64, gasPrice int64, nonce uint64, data []byte) string {
 
-	privateKey, _ := crypto.HexToECDSA(priv)
+	privateKey, _ := crypto.HexToECDSA(creatorPriv)
 	amount := big.NewInt(0) // 1 ether
 
 	tx := types.NewContractCreation(nonce, amount, gas, big.NewInt(gasPrice), data)
@@ -81,7 +85,7 @@ func generateRawTxSetContract(t *testing.T, contractAddr string, gas uint64, gas
 
 	chainID := big.NewInt(3) // ropsten
 
-	privateKey, _ := crypto.HexToECDSA(priv)
+	privateKey, _ := crypto.HexToECDSA(candidatePriv)
 	amount := big.NewInt(0) // 1 ether
 
 	tx := types.NewTransaction(nonce, recipientAddr, amount, gas, big.NewInt(gasPrice), data)
@@ -100,7 +104,7 @@ func generateRawTxSetContract(t *testing.T, contractAddr string, gas uint64, gas
 func deployContract(t *testing.T) *string {
 	h := NewETHHandler()
 	m := &MsgToChain{
-		From:    addr,
+		From:    creatorAddr,
 		User:    "test1",
 		Version: "1",
 		ChainID: 3,
@@ -134,7 +138,7 @@ func deployContract(t *testing.T) *string {
 				rawTxData2 := generateRawTxDeployContract(t, 5000000, msg.TxInfo.GasPrice, msg.TxInfo.Nonce, msg.TxInfo.Data)
 
 				h.ToChains <- &MsgToChain{
-					From:     addr,
+					From:     creatorAddr,
 					User:     "test1",
 					Version:  "1",
 					ChainID:  3,
@@ -249,7 +253,7 @@ func setContract(t *testing.T, contractAddr *string) {
 
 	input = append(input, *res.Proposal.Nonce, *res.Signature)
 	m := &MsgToChain{
-		From:    addr,
+		From:    candidateAddr,
 		User:    "test1",
 		Version: "1",
 		ChainID: 3,
@@ -272,7 +276,7 @@ func setContract(t *testing.T, contractAddr *string) {
 				rawTxData3 := generateRawTxSetContract(t, *contractAddr, 500000, msg.TxInfo.GasPrice, msg.TxInfo.Nonce, msg.TxInfo.Data)
 
 				h.ToChains <- &MsgToChain{
-					From:     addr,
+					From:     candidateAddr,
 					User:     "test1",
 					Version:  "1",
 					ChainID:  3,
@@ -291,7 +295,7 @@ func callContract(t *testing.T, contractAddr *string) {
 	h := NewETHHandler()
 
 	m := &MsgToChain{
-		From:    addr,
+		From:    candidateAddr,
 		User:    "test1",
 		Version: "1",
 		ChainID: 3,
@@ -322,7 +326,7 @@ func TestSendNaiveTx(t *testing.T) {
 	rawTxData1 := generateRawTxNaive(t)
 
 	h.ToChains <- &MsgToChain{
-		From:     addr,
+		From:     creatorAddr,
 		User:     "test1",
 		Version:  "1",
 		ChainID:  3,
