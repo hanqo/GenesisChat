@@ -79,6 +79,7 @@ message SetDesc {
 	DefaultAcsMode default_acs = 1;
 	bytes public = 2;
 	bytes private = 3;
+	string con_addr = 4;
 }
 
 message GetOpts {

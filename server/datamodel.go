@@ -68,6 +68,8 @@ type MsgSetDesc struct {
 	DefaultAcs *MsgDefaultAcsMode `json:"defacs,omitempty"` // default access mode
 	Public     interface{}        `json:"public,omitempty"`
 	Private    interface{}        `json:"private,omitempty"` // Per-subscription private data
+	// kai: allow set conaddr
+	ConAddr string `json:"conaddr,omitempty"`
 }
 
 // MsgSetQuery is an update to topic metadata: Desc, subscriptions, or tags.

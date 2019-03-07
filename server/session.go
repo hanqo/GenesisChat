@@ -418,7 +418,7 @@ func (s *Session) subscribe(msg *ClientComMessage) {
 		//       when joining a group topic, the access permissions should be checked prior to sending tx
 		//       leave it as-is in the initial version
 	} else if strings.HasPrefix(expanded, "grp") && (newtopic || !subscribed) {
-			go conSub(s, msg, expanded, newtopic, true)
+		go conSub(s, msg, expanded, newtopic, true)
 	} else {
 		globals.hub.join <- &sessionJoin{
 			topic: expanded,
@@ -1302,48 +1302,55 @@ func (s *Session) serialize(msg *ServerComMessage) interface{} {
 func updateConAddr(topic, v string) {
 	// store it to loaded topic
 	tt := globals.hub.topicGet(topic)
-	tt.conAddr = v
-	// store it to DB
-	upd := make(map[string]interface{})
-	upd["ConAddr"] = v
-	err := store.Topics.Update(topic, upd)
+	if tt != nil {
+		tt.conAddr = v
+		// store it to DB
+		upd := make(map[string]interface{})
+		upd["ConAddr"] = v
+		err := store.Topics.Update(topic, upd)
 
-	if err != nil {
-		log.Println("update DB failed")
+		if err != nil {
+			log.Println("update DB failed")
+		}
+	} else {
+		log.Println("topic is not loaded: ", topic)
 	}
 }
 
 func updateEntryCost(topic string, v uint64) {
 	// store it to loaded topic
 	tt := globals.hub.topicGet(topic)
-	tt.entryCost = v
-	// store it to DB
-	upd := make(map[string]interface{})
-	upd["EntryCost"] = v
-	err := store.Topics.Update(topic, upd)
+	if tt != nil {
+		tt.entryCost = v
+		// store it to DB
+		upd := make(map[string]interface{})
+		upd["EntryCost"] = v
+		err := store.Topics.Update(topic, upd)
 
-	if err != nil {
-		log.Println("update DB failed")
+		if err != nil {
+			log.Println("update DB failed")
+		}
+	} else {
+		log.Println("topic is not loaded: ", topic)
 	}
 }
 
 // kai: helper func to create a {txres} message in testmode
-func createTxResMsgTest(txhash, conaddr, id, topic string, confirmed bool) (*ServerComMessage) {
+func createTxResMsgTest(txhash, conaddr, id, topic string, confirmed bool) *ServerComMessage {
 	r := &ServerComMessage{
-		id: id,
+		id:        id,
 		timestamp: time.Now(),
 	}
 	r.TxRes = &MsgServerTxRes{
-		Id:    id,
-		Topic: topic,
+		Id:        id,
+		Topic:     topic,
 		Confirmed: confirmed,
-		TxHash: txhash,
-		ConAddr: conaddr,
+		TxHash:    txhash,
+		ConAddr:   conaddr,
 	}
 
-	return r;
+	return r
 }
-
 
 // kai: helper func to create a {txres} message
 func createTxResMsg(m *bc.MsgFromChain, t, id, topic string, ts time.Time) (*ServerComMessage, error) {
@@ -1514,7 +1521,8 @@ func conSub(s *Session, msg *ClientComMessage, subName string, isNewTopic bool, 
 		conaddr := new(string)
 		if isNewTopic {
 			txhash, conaddr = bc.DeployContractTestMode()
-			updateConAddr(msg.topic, *conaddr)
+			// updateConAddr(msg.topic, *conaddr)
+			msg.Sub.Set.Desc.ConAddr = *conaddr
 		} else {
 			a := globals.hub.topicGet(msg.topic).conAddr
 			txhash = bc.SetContractTestMode(&a)
@@ -1529,7 +1537,7 @@ func conSub(s *Session, msg *ClientComMessage, subName string, isNewTopic bool, 
 			s.queueOut(ErrInvalidTxGeneral(msg.id, msg.topic, msg.timestamp))
 			return
 		}
-	
+
 		if isNewTopic && msg.Sub.Tx.Type != "depcon" {
 			log.Println("conSub", "expect depcon", s.sid)
 			s.queueOut(ErrInvalidTxType(msg.id, msg.topic, msg.timestamp, "depcon"))
@@ -1539,9 +1547,9 @@ func conSub(s *Session, msg *ClientComMessage, subName string, isNewTopic bool, 
 			s.queueOut(ErrInvalidTxType(msg.id, msg.topic, msg.timestamp, "setcon"))
 			return
 		}
-	
+
 		err := handleTx(s, msg.Sub.Tx, msg.id, msg.topic, msg.timestamp)
-	
+
 		if err != nil {
 			log.Println(err)
 			return

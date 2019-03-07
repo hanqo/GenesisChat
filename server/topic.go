@@ -1380,6 +1380,8 @@ func (t *Topic) replySetDesc(sess *Session, asUid types.Uid, set *MsgClientSet) 
 				return errors.New("incorrect attempt to change metadata of a p2p topic")
 			}
 		case types.TopicCatGrp:
+			// kai: store conaddr to DB if available
+			sendPres = assignGenericValues(core, "ConAddr", set.Desc.ConAddr)
 			// Update group topic
 			if t.owner == asUid {
 				err = assignAccess(core, set.Desc.DefaultAcs)

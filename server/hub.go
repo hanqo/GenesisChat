@@ -655,6 +655,8 @@ func topicInit(sreg *sessionJoin, h *Hub) {
 				if !isNullValue(pktsub.Set.Desc.Private) {
 					userData.private = pktsub.Set.Desc.Private
 				}
+				// kai: update the conaddr if available
+				t.conAddr = pktsub.Set.Desc.ConAddr
 
 				// set default access
 				if pktsub.Set.Desc.DefaultAcs != nil {
