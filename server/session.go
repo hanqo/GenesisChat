@@ -1310,7 +1310,7 @@ func createTxResMsg(m *bc.MsgFromChain, t, id, topic string, ts time.Time) (*Ser
 	}
 
 	if m.TxInfo != nil { // we get needed info for creating a tx
-		if m.TxInfo.GasPrice <= 0 || m.TxInfo.Nonce <= 0 {
+		if m.TxInfo.GasPrice <= 0 { // disable nonce check for now
 			log.Printf("invalid gasprice=%d, nonce=%d\n", m.TxInfo.GasPrice, m.TxInfo.Nonce)
 			return ErrInvalidTxInfo(id, topic, ts), errors.New("invalid tx info")
 		}
