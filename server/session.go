@@ -418,7 +418,7 @@ func (s *Session) subscribe(msg *ClientComMessage) {
 		//       when joining a group topic, the access permissions should be checked prior to sending tx
 		//       leave it as-is in the initial version
 	} else if strings.HasPrefix(expanded, "grp") && (newtopic || !subscribed) {
-			go conSub(s, msg, expanded, newtopic, true, true)
+			go conSub(s, msg, expanded, newtopic, true)
 	} else {
 		globals.hub.join <- &sessionJoin{
 			topic: expanded,
@@ -1297,6 +1297,36 @@ func (s *Session) serialize(msg *ServerComMessage) interface{} {
 	return out
 }
 
+// kai: helper func to get or set DB items
+//      todo: use one func
+func updateConAddr(topic, v string) {
+	// store it to loaded topic
+	tt := globals.hub.topicGet(topic)
+	tt.conAddr = v
+	// store it to DB
+	upd := make(map[string]interface{})
+	upd["ConAddr"] = v
+	err := store.Topics.Update(topic, upd)
+
+	if err != nil {
+		log.Println("update DB failed")
+	}
+}
+
+func updateEntryCost(topic string, v uint64) {
+	// store it to loaded topic
+	tt := globals.hub.topicGet(topic)
+	tt.entryCost = v
+	// store it to DB
+	upd := make(map[string]interface{})
+	upd["EntryCost"] = v
+	err := store.Topics.Update(topic, upd)
+
+	if err != nil {
+		log.Println("update DB failed")
+	}
+}
+
 // kai: helper func to create a {txres} message in testmode
 func createTxResMsgTest(txhash, conaddr, id, topic string, confirmed bool) (*ServerComMessage) {
 	r := &ServerComMessage{
@@ -1480,16 +1510,18 @@ func conSub(s *Session, msg *ClientComMessage, subName string, isNewTopic bool, 
 		txSent := createTxResMsgTest("", "", msg.id, msg.topic, false)
 		s.queueOut(txSent)
 
-		// create an eth handler
-		h := bc.NewETHHandler()
-		if h == nil {
-			log.Println("handleTx", "nil ETHHandler", s.sid)
-			s.queueOut(ErrETHHandler(id, topic, ts))
-			return errors.New("nil eth handler")
+		txhash := new(string)
+		conaddr := new(string)
+		if isNewTopic {
+			txhash, conaddr = bc.DeployContractTestMode()
+			updateConAddr(msg.topic, *conaddr)
+		} else {
+			a := globals.hub.topicGet(msg.topic).conAddr
+			txhash = bc.SetContractTestMode(&a)
 		}
 
 		// return a txres: tx confirmed
-		txConfirmed := createTxResMsgTest(, msg.id, msg.topic, true)
+		txConfirmed := createTxResMsgTest(*txhash, *conaddr, msg.id, msg.topic, true)
 		s.queueOut(txConfirmed)
 	} else {
 		if msg.Sub.Tx == nil || msg.Sub.Tx.What != "send" {

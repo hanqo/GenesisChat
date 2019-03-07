@@ -3,7 +3,7 @@ package blockchain
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/AfterworkBlockchain/GenesisChat/server/vote"
+	"github.com/tinode/chat/server/vote"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -161,7 +161,7 @@ func SetContractTestMode(contractAddr *string) *string{
 	voteNonce := "1"
 	res := VoteProcessTestMode(contractAddr, &funcName, &voteNonce)
 
-	input := []string{"500", "600"}
+	input := []string{"500", "20"}
 
 	input = append(input, *res.Proposal.Nonce, *res.Signature)
 	m := &MsgToChain{
