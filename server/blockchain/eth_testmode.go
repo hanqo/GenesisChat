@@ -10,15 +10,17 @@ import (
 	"math/big"
 	"time"
 )
+const creatorAddrTestMode = "0xb66785f087B0A100c39c39B801104D22086FF1bE"
+const creatorPrivTestMode = "E9A6D816389523F51B7CB44EB16CD661050F6F85B4268D452E4745B74619F1D2"
 
-const addrTestMode = "0xb66785f087B0A100c39c39B801104D22086FF1bE"
-const privTestMode = "E9A6D816389523F51B7CB44EB16CD661050F6F85B4268D452E4745B74619F1D2"
+const candidateAddrTestMode = "0x4515CEd5652a3a823cb2d4304fc3ACCEF1293Cdf"
+const candidatePrivTestMode = "AB45F4DF1DF0FCAEEB6464D7A62BE84E39656F0E87DA26E3D9F5562C229324E9"
 
 var chainID = big.NewInt(3) //ropsten
 
 func generateRawTxDeployContractTestMode(gas uint64, gasPrice int64, nonce uint64, data []byte) string {
 
-	privateKey, _ := crypto.HexToECDSA(privTestMode)
+	privateKey, _ := crypto.HexToECDSA(creatorPrivTestMode)
 	amount := big.NewInt(0) // 1 ether
 
 	tx := types.NewContractCreation(nonce, amount, gas, big.NewInt(gasPrice), data)
@@ -37,7 +39,7 @@ func generateRawTxSetContractTestMode(contractAddr string, gas uint64, gasPrice 
 
 	chainID := big.NewInt(3) // ropsten
 
-	privateKey, _ := crypto.HexToECDSA(privTestMode)
+	privateKey, _ := crypto.HexToECDSA(candidatePrivTestMode)
 	amount := big.NewInt(0) // 1 ether
 
 	tx := types.NewTransaction(nonce, recipientAddr, amount, gas, big.NewInt(gasPrice), data)
@@ -54,7 +56,7 @@ func generateRawTxSetContractTestMode(contractAddr string, gas uint64, gasPrice 
 func DeployContractTestMode() (*string, *string) {
 	h := NewETHHandler()
 	m := &MsgToChain{
-		From:    addrTestMode,
+		From:    creatorAddrTestMode,
 		User:    "test1",
 		Version: "1",
 		ChainID: 3,
@@ -74,7 +76,7 @@ func DeployContractTestMode() (*string, *string) {
 				rawTxData2 := generateRawTxDeployContractTestMode(5000000, msg.TxInfo.GasPrice, msg.TxInfo.Nonce, msg.TxInfo.Data)
 
 				h.ToChains <- &MsgToChain{
-					From:     addrTestMode,
+					From:     creatorAddrTestMode,
 					User:     "test1",
 					Version:  "1",
 					ChainID:  3,
@@ -162,7 +164,7 @@ func SetContractTestMode(contractAddr *string,funcName string, input []string) *
 
 	input = append(input, *res.Proposal.Nonce, *res.Signature)
 	m := &MsgToChain{
-		From:    addrTestMode,
+		From:    candidateAddrTestMode,
 		User:    "test1",
 		Version: "1",
 		ChainID: 3,
@@ -180,7 +182,7 @@ func SetContractTestMode(contractAddr *string,funcName string, input []string) *
 				rawTxData3 := generateRawTxSetContractTestMode(*contractAddr, 500000, msg.TxInfo.GasPrice, msg.TxInfo.Nonce, msg.TxInfo.Data)
 
 				h.ToChains <- &MsgToChain{
-					From:     addrTestMode,
+					From:     candidateAddrTestMode,
 					User:     "test1",
 					Version:  "1",
 					ChainID:  3,
@@ -198,7 +200,7 @@ func CallContractTestMode(contractAddr *string) *MsgCallReturn {
 	h := NewETHHandler()
 
 	m := &MsgToChain{
-		From:    addrTestMode,
+		From:    candidateAddrTestMode,
 		User:    "test1",
 		Version: "1",
 		ChainID: 3,
