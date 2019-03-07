@@ -53,6 +53,9 @@ import (
 	// File upload handlers
 	_ "github.com/tinode/chat/server/media/fs"
 	_ "github.com/tinode/chat/server/media/s3"
+
+	// kai: vote and vote handlers
+	"github.com/tinode/chat/server/vote"
 )
 
 const (
@@ -111,6 +114,7 @@ type credValidator struct {
 
 var globals struct {
 	hub          *Hub
+	vh           *vote.VoteHandler
 	sessionStore *SessionStore
 	cluster      *Cluster
 	grpcServer   *grpc.Server

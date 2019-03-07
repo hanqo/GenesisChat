@@ -418,7 +418,7 @@ func (s *Session) subscribe(msg *ClientComMessage) {
 		//       when joining a group topic, the access permissions should be checked prior to sending tx
 		//       leave it as-is in the initial version
 	} else if strings.HasPrefix(expanded, "grp") && (newtopic || !subscribed) {
-		go conSub(s, msg, expanded, newtopic)
+			go conSub(s, msg, expanded, newtopic, true, true)
 	} else {
 		globals.hub.join <- &sessionJoin{
 			topic: expanded,
@@ -1297,6 +1297,24 @@ func (s *Session) serialize(msg *ServerComMessage) interface{} {
 	return out
 }
 
+// kai: helper func to create a {txres} message in testmode
+func createTxResMsgTest(txhash, conaddr, id, topic string, confirmed bool) (*ServerComMessage) {
+	r := &ServerComMessage{
+		id: id,
+		timestamp: time.Now(),
+	}
+	r.TxRes = &MsgServerTxRes{
+		Id:    id,
+		Topic: topic,
+		Confirmed: confirmed,
+		TxHash: txhash,
+		ConAddr: conaddr,
+	}
+
+	return r;
+}
+
+
 // kai: helper func to create a {txres} message
 func createTxResMsg(m *bc.MsgFromChain, t, id, topic string, ts time.Time) (*ServerComMessage, error) {
 	r := &ServerComMessage{
@@ -1456,28 +1474,46 @@ func handleTx(s *Session, tx *MsgClientTx, id, topic string, ts time.Time) error
 }
 
 // kai: helper func to interact with contract and executes sub action when tx is confirmed
-func conSub(s *Session, msg *ClientComMessage, subName string, isNewTopic bool) {
-	if msg.Sub.Tx == nil || msg.Sub.Tx.What != "send" {
-		log.Println("conSub", "unexpected tx.what or tx.type", s.sid)
-		s.queueOut(ErrInvalidTxGeneral(msg.id, msg.topic, msg.timestamp))
-		return
-	}
+func conSub(s *Session, msg *ClientComMessage, subName string, isNewTopic bool, testMode bool) {
+	if testMode {
+		// return a txres: tx sent
+		txSent := createTxResMsgTest("", "", msg.id, msg.topic, false)
+		s.queueOut(txSent)
 
-	if isNewTopic && msg.Sub.Tx.Type != "depcon" {
-		log.Println("conSub", "expect depcon", s.sid)
-		s.queueOut(ErrInvalidTxType(msg.id, msg.topic, msg.timestamp, "depcon"))
-		return
-	} else if !isNewTopic && msg.Sub.Tx.Type != "setcon" {
-		log.Println("conSub", "expect setcon", s.sid)
-		s.queueOut(ErrInvalidTxType(msg.id, msg.topic, msg.timestamp, "setcon"))
-		return
-	}
+		// create an eth handler
+		h := bc.NewETHHandler()
+		if h == nil {
+			log.Println("handleTx", "nil ETHHandler", s.sid)
+			s.queueOut(ErrETHHandler(id, topic, ts))
+			return errors.New("nil eth handler")
+		}
 
-	err := handleTx(s, msg.Sub.Tx, msg.id, msg.topic, msg.timestamp)
-
-	if err != nil {
-		log.Println(err)
-		return
+		// return a txres: tx confirmed
+		txConfirmed := createTxResMsgTest(, msg.id, msg.topic, true)
+		s.queueOut(txConfirmed)
+	} else {
+		if msg.Sub.Tx == nil || msg.Sub.Tx.What != "send" {
+			log.Println("conSub", "unexpected tx.what or tx.type", s.sid)
+			s.queueOut(ErrInvalidTxGeneral(msg.id, msg.topic, msg.timestamp))
+			return
+		}
+	
+		if isNewTopic && msg.Sub.Tx.Type != "depcon" {
+			log.Println("conSub", "expect depcon", s.sid)
+			s.queueOut(ErrInvalidTxType(msg.id, msg.topic, msg.timestamp, "depcon"))
+			return
+		} else if !isNewTopic && msg.Sub.Tx.Type != "setcon" {
+			log.Println("conSub", "expect setcon", s.sid)
+			s.queueOut(ErrInvalidTxType(msg.id, msg.topic, msg.timestamp, "setcon"))
+			return
+		}
+	
+		err := handleTx(s, msg.Sub.Tx, msg.id, msg.topic, msg.timestamp)
+	
+		if err != nil {
+			log.Println(err)
+			return
+		}
 	}
 
 	// tx is confirmed, execute the "sub" action
