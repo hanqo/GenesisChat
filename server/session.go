@@ -1302,9 +1302,10 @@ func (s *Session) serialize(msg *ServerComMessage) interface{} {
 
 // kai: helper func to create a {txres} message
 func createTxResMsg(m *bc.MsgFromChain, t, id, topic string, ts time.Time) (*ServerComMessage, error) {
-	var r *ServerComMessage
-	r.id = id
-	r.timestamp = ts
+	r := &ServerComMessage{
+		id:        id,
+		timestamp: ts,
+	}
 	r.TxRes = &MsgServerTxRes{
 		Type:  t,
 		Id:    id,
