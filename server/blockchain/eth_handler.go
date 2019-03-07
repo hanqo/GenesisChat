@@ -200,6 +200,7 @@ func (h *ETHHandler) generateTxInfo(r *MsgToChain) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	defer c.Close()
 
 	from := common.HexToAddress(r.From)
@@ -261,6 +262,7 @@ func (h *ETHHandler) callContract(r *MsgToChain) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	retStr, err := h.abi.unpackContractFunc(returnByte, r.Call.ContractFunc.Function)
 
 	h.FromChains <- &MsgFromChain{

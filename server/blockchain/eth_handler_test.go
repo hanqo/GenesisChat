@@ -24,7 +24,7 @@ var chainID = big.NewInt(3) //ropsten
 
 func generateRawTxNaive(t *testing.T) string {
 
-	client, err := ethclient.Dial(ethRPCAddr) //Ganache local address
+	client, err := ethclient.Dial(ethRPCAddr) //Ropsten
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -125,7 +125,7 @@ func deployContract(t *testing.T) *string {
 				if msg.TxInfo.GasPrice <= 0 {
 					t.Error("gas price not greater than 0")
 				}
-				if msg.TxInfo.Nonce <= 0 {
+				if msg.TxInfo.Nonce < 0 {
 					t.Error("Nonce not greater than 0")
 				}
 				if msg.TxInfo.Data == nil {
@@ -283,7 +283,6 @@ func setContract(t *testing.T, contractAddr *string) {
 				t.Log("set tx confirmed with gas used:", msg.TxReceipt.GasUsed)
 				return
 			}
-
 		}
 	}
 }

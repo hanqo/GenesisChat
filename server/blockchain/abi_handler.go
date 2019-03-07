@@ -90,13 +90,12 @@ func (h *ABIHandler) packContractFunc(name string, inputs []string) []byte {
 	case "getProgram":
 		res, err = h.abiObject.Pack(name)
 
-		//TODO:change func in contract from string to address
 	case "setProgram":
 		addr := common.HexToAddress(inputs[0])
 		nonce := big.NewInt(0)
-		nonce, _ = nonce.SetString(inputs[1], 10)
-		sig, _ := hex.DecodeString(inputs[2])
-		res, err = h.abiObject.Pack(name, addr, nonce, sig)
+		nonce, _ = nonce.SetString(inputs[2], 10)
+		sig, _ := hex.DecodeString(inputs[3])
+		res, err = h.abiObject.Pack(name, addr, inputs[1], nonce, sig)
 
 	case "getCost":
 		res, err = h.abiObject.Pack(name)
