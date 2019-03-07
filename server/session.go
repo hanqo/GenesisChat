@@ -26,6 +26,7 @@ import (
 	"github.com/tinode/chat/server/store/types"
 
 	bc "github.com/tinode/chat/server/blockchain"
+	// v "github.com/tinode/chat/server/vote"
 )
 
 // Wire transport
@@ -1244,6 +1245,9 @@ func (s *Session) vote(msg *ClientComMessage) {
 		log.Println("topic is not loaded: ", msg.topic)
 		return
 	}
+
+	// todo handling of err
+	go handleVote(s, msg.Vote, msg.id, msg.topic, msg.timestamp, true)
 }
 
 // expandTopicName expands session specific topic name to global name
@@ -1525,6 +1529,27 @@ func handleTx(s *Session, tx *MsgClientTx, id, topic string, ts time.Time) error
 	}
 }
 
+// kai: helper func to handle the vote
+//      blocked till we get a response from blockchain
+func handleVote(s *Session, vote *MsgClientVote, id, topic string, ts time.Time, testMode bool) error {
+	if testMode {
+		tt := globals.hub.topicGet(topic)
+		if tt != nil {
+			// txhash := bc.SetContractTestMode(&tt.conAddr, "setCost", []string{"500"})
+		} else {
+			log.Println("topic is not loaded: ", topic)
+		}
+	} else {
+		// check if handler is there
+		h := globals.voteHandlers[topic]
+		if h == nil {
+			// h := v.NewVoteHandler()
+		}
+	}
+
+	return nil
+}
+
 // kai: helper func to interact with contract and executes sub action when tx is confirmed
 func conSub(s *Session, msg *ClientComMessage, subName string, isNewTopic bool, testMode bool) {
 	if testMode {
@@ -1539,14 +1564,14 @@ func conSub(s *Session, msg *ClientComMessage, subName string, isNewTopic bool, 
 			// updateConAddr(msg.topic, *conaddr)
 			msg.Sub.Set.Desc.ConAddr = *conaddr
 		} else {
-			t := globals.hub.topicGet(msg.topic)
-			if t != nil {
-				txhash = bc.SetContractTestMode(&t.conAddr, "join", []string{})
+			t, err := store.Topics.Get(msg.topic)
+			if err != nil {
+				txhash = bc.SetContractTestMode(&t.ConAddr, "join", []string{})
 				// return a txres: tx confirmed
-				txConfirmed := createTxResMsgTest(*txhash, t.conAddr, msg.id, msg.topic, true)
+				txConfirmed := createTxResMsgTest(*txhash, t.ConAddr, msg.id, msg.topic, true)
 				s.queueOut(txConfirmed)
 			} else {
-				log.Println("topic not loaded: ", msg.topic)
+				log.Println("conSub: can not load topic from DB: ", msg.topic)
 				s.queueOut(ErrInvalidContractAddr(msg.id, msg.topic, msg.timestamp))
 			}
 		}
@@ -1590,14 +1615,14 @@ func conLeave(s *Session, msg *ClientComMessage, subName string, testMode bool) 
 		txSent := createTxResMsgTest("", "", msg.id, msg.topic, false)
 		s.queueOut(txSent)
 
-		t := globals.hub.topicGet(msg.topic)
-		if t != nil {
-			txhash := bc.SetContractTestMode(&t.conAddr, "leave", []string{})
+		t, err := store.Topics.Get(msg.topic)
+		if err != nil {
+			txhash := bc.SetContractTestMode(&t.ConAddr, "leave", []string{})
 			// return a txres: tx confirmed
-			txConfirmed := createTxResMsgTest(*txhash, t.conAddr, msg.id, msg.topic, true)
+			txConfirmed := createTxResMsgTest(*txhash, t.ConAddr, msg.id, msg.topic, true)
 			s.queueOut(txConfirmed)
 		} else {
-			log.Println("topic not loaded: ", msg.topic)
+			log.Println("conLeave: cannot load topic from DB: ", msg.topic)
 			s.queueOut(ErrInvalidContractAddr(msg.id, msg.topic, msg.timestamp))
 		}
 	} else {
