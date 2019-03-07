@@ -444,7 +444,7 @@ func (s *Session) leave(msg *ClientComMessage) {
 			s.queueOut(ErrPermissionDenied(msg.id, msg.topic, msg.timestamp))
 		} else if strings.HasPrefix(expanded, "grp") && msg.Leave.Unsub {
 			// kai: unsub the group topic > trigger contract change
-			go conLeave(s, msg, expanded)
+			go conLeave(s, msg, expanded, true)
 		} else {
 			// Unlink from topic, topic will send a reply.
 			s.delSub(expanded)
@@ -1524,13 +1524,17 @@ func conSub(s *Session, msg *ClientComMessage, subName string, isNewTopic bool, 
 			// updateConAddr(msg.topic, *conaddr)
 			msg.Sub.Set.Desc.ConAddr = *conaddr
 		} else {
-			a := globals.hub.topicGet(msg.topic).conAddr
-			txhash = bc.SetContractTestMode(&a, "join", []string{})
+			t := globals.hub.topicGet(msg.topic)
+			if t != nil {
+				txhash = bc.SetContractTestMode(&t.conAddr, "join", []string{})
+				// return a txres: tx confirmed
+				txConfirmed := createTxResMsgTest(*txhash, t.conAddr, msg.id, msg.topic, true)
+				s.queueOut(txConfirmed)
+			} else {
+				log.Println("topic not loaded: ", msg.topic)
+				s.queueOut(ErrInvalidContractAddr(msg.id, msg.topic, msg.timestamp))
+			}
 		}
-
-		// return a txres: tx confirmed
-		txConfirmed := createTxResMsgTest(*txhash, *conaddr, msg.id, msg.topic, true)
-		s.queueOut(txConfirmed)
 	} else {
 		if msg.Sub.Tx == nil || msg.Sub.Tx.What != "send" {
 			log.Println("conSub", "unexpected tx.what or tx.type", s.sid)
@@ -1565,18 +1569,35 @@ func conSub(s *Session, msg *ClientComMessage, subName string, isNewTopic bool, 
 }
 
 // kai: helper func to interact with contract and executes leave action when tx is confirmed
-func conLeave(s *Session, msg *ClientComMessage, subName string) {
-	if msg.Leave.Tx == nil || msg.Leave.Tx.What != "send" || msg.Leave.Tx.Type != "setcon" {
-		log.Println("conLeave", "unexpected tx.what or tx.type", s.sid)
-		s.queueOut(ErrInvalidTxGeneral(msg.id, msg.topic, msg.timestamp))
-		return
-	}
+func conLeave(s *Session, msg *ClientComMessage, subName string, testMode bool) {
+	if testMode {
+		// return a txres: tx sent
+		txSent := createTxResMsgTest("", "", msg.id, msg.topic, false)
+		s.queueOut(txSent)
 
-	err := handleTx(s, msg.Leave.Tx, msg.id, msg.topic, msg.timestamp)
+		t := globals.hub.topicGet(msg.topic)
+		if t != nil {
+			txhash := bc.SetContractTestMode(&t.conAddr, "leave", []string{})
+			// return a txres: tx confirmed
+			txConfirmed := createTxResMsgTest(*txhash, t.conAddr, msg.id, msg.topic, true)
+			s.queueOut(txConfirmed)
+		} else {
+			log.Println("topic not loaded: ", msg.topic)
+			s.queueOut(ErrInvalidContractAddr(msg.id, msg.topic, msg.timestamp))
+		}
+	} else {
+		if msg.Leave.Tx == nil || msg.Leave.Tx.What != "send" || msg.Leave.Tx.Type != "setcon" {
+			log.Println("conLeave", "unexpected tx.what or tx.type", s.sid)
+			s.queueOut(ErrInvalidTxGeneral(msg.id, msg.topic, msg.timestamp))
+			return
+		}
 
-	if err != nil {
-		log.Println(err)
-		return
+		err := handleTx(s, msg.Leave.Tx, msg.id, msg.topic, msg.timestamp)
+
+		if err != nil {
+			log.Println(err)
+			return
+		}
 	}
 
 	// tx is confirmed, execute the "leave" action
