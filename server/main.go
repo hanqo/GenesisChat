@@ -114,7 +114,7 @@ type credValidator struct {
 
 var globals struct {
 	hub          *Hub
-	vh           *vote.VoteHandler
+	voteHandlers map[string]*vote.VoteHandler
 	sessionStore *SessionStore
 	cluster      *Cluster
 	grpcServer   *grpc.Server

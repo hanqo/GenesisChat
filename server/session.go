@@ -346,6 +346,11 @@ func (s *Session) dispatch(msg *ClientComMessage) {
 		msg.id = msg.Tx.Id
 		msg.topic = msg.Tx.Topic
 
+	case msg.Vote != nil:
+		handler = checkVers(msg, checkUser(msg, s.vote))
+		msg.id = msg.Vote.Id
+		msg.topic = msg.Vote.Topic
+
 	default:
 		// Unknown message
 		s.queueOut(ErrMalformed("", "", msg.timestamp))
@@ -1223,12 +1228,22 @@ func (s *Session) tx(msg *ClientComMessage) {
 	// check if topic is loaded
 	t := globals.hub.topicGet(msg.topic)
 	if t == nil {
-		log.Println("the target topic is not loaded")
+		log.Println("topic is not loaded: ", msg.topic)
 		return
 	}
 
 	// todo handling of err
 	go handleTx(s, msg.Tx, msg.id, msg.topic, msg.timestamp)
+}
+
+// kai: the vote message from client
+func (s *Session) vote(msg *ClientComMessage) {
+	// check if topic is loaded
+	t := globals.hub.topicGet(msg.topic)
+	if t == nil {
+		log.Println("topic is not loaded: ", msg.topic)
+		return
+	}
 }
 
 // expandTopicName expands session specific topic name to global name
