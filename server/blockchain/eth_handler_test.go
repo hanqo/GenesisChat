@@ -20,7 +20,7 @@ const addr = "0xb66785f087B0A100c39c39B801104D22086FF1bE"
 const priv = "E9A6D816389523F51B7CB44EB16CD661050F6F85B4268D452E4745B74619F1D2"
 const receiver = "0xb66785f087B0A100c39c39B801104D22086FF1bE"
 
-var chainID = big.NewInt(3) //ropsten
+//var chainID = big.NewInt(3) //ropsten
 
 func generateRawTxNaive(t *testing.T) string {
 
