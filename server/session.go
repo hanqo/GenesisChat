@@ -1218,10 +1218,7 @@ func (s *Session) note(msg *ClientComMessage) {
 // kai: the tx message from client
 func (s *Session) tx(msg *ClientComMessage) {
 
-	if msg.topic == "" {
-		log.Println("we get a tx msg but topic name is empty")
-		return
-	}
+	// todo: check topic name in different cases
 
 	// check if topic is loaded
 	t := globals.hub.topicGet(msg.topic)
