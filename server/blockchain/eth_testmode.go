@@ -160,9 +160,12 @@ func VoteProcessTestMode(contractAddr *string, funcName *string, voteNonce *stri
 func SetContractTestMode(contractAddr *string,funcName string, input []string) *string{
 	h := NewETHHandler()
 	voteNonce := "1"
-	res := VoteProcessTestMode(contractAddr, &funcName, &voteNonce)
 
-	input = append(input, *res.Proposal.Nonce, *res.Signature)
+	if  *contractAddr  == "setCost" {
+		res := VoteProcessTestMode(contractAddr, &funcName, &voteNonce)
+		input = append(input, *res.Proposal.Nonce, *res.Signature)
+	}
+
 	m := &MsgToChain{
 		From:    candidateAddrTestMode,
 		User:    "test1",
