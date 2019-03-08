@@ -1591,6 +1591,8 @@ func conSub(s *Session, msg *ClientComMessage, subName string, isNewTopic bool, 
 			txhash, conaddr = bc.DeployContractTestMode()
 			// updateConAddr(msg.topic, *conaddr)
 			msg.Sub.Set.Desc.ConAddr = *conaddr
+			txConfirmed := createTxResMsgTest(*txhash, *conaddr, msg.id, msg.topic, true)
+			s.queueOut(txConfirmed)
 		} else {
 			t, err := store.Topics.Get(msg.topic)
 			if err == nil {
