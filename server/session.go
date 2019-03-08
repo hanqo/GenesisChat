@@ -1560,7 +1560,8 @@ func handleVote(s *Session, id, topic, user string, testMode bool) error {
 			// return a txres: tx sent
 			txSent := createTxResMsgTest("", "", id, topic, false)
 			s.queueOut(txSent)
-			txhash := bc.SetContractTestMode(&t.ConAddr, "setCost", []string{"500", "20"})
+			log.Println("handleVote: topic = ", topic, " conaddr = ", t.ConAddr)
+			txhash := bc.SetContractTestMode(&t.ConAddr, "setCost")
 			// return a txres: tx confirmed
 			txConfirmed := createTxResMsgTest(*txhash, t.ConAddr, id, topic, true)
 			s.queueOut(txConfirmed)
@@ -1596,7 +1597,7 @@ func conSub(s *Session, msg *ClientComMessage, subName string, isNewTopic bool, 
 		} else {
 			t, err := store.Topics.Get(msg.topic)
 			if err == nil {
-				txhash = bc.SetContractTestMode(&t.ConAddr, "join", []string{})
+				txhash = bc.SetContractTestMode(&t.ConAddr, "join")
 				// return a txres: tx confirmed
 				txConfirmed := createTxResMsgTest(*txhash, t.ConAddr, msg.id, msg.topic, true)
 				s.queueOut(txConfirmed)
@@ -1647,7 +1648,7 @@ func conLeave(s *Session, msg *ClientComMessage, subName string, testMode bool) 
 
 		t, err := store.Topics.Get(msg.topic)
 		if err == nil {
-			txhash := bc.SetContractTestMode(&t.ConAddr, "leave", []string{})
+			txhash := bc.SetContractTestMode(&t.ConAddr, "leave")
 			// return a txres: tx confirmed
 			txConfirmed := createTxResMsgTest(*txhash, t.ConAddr, msg.id, msg.topic, true)
 			s.queueOut(txConfirmed)
