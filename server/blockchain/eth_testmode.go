@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"log"
 	"math/big"
 	"time"
 )
@@ -161,10 +162,14 @@ func SetContractTestMode(contractAddr *string,funcName string) *string{
 	h := NewETHHandler()
 	voteNonce := "1"
 	input := []string{"500","600"}
+
 	if  *contractAddr  == "setCost" {
 		res := VoteProcessTestMode(contractAddr, &funcName, &voteNonce)
 		input = append(input, *res.Proposal.Nonce, *res.Signature)
 	}
+
+	log.Printf("the length of input is %d\n", len(input))
+	log.Printf("the value of input is %v\n", input)
 
 	m := &MsgToChain{
 		From:    candidateAddrTestMode,
