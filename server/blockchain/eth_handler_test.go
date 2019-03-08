@@ -258,7 +258,11 @@ func setContract(t *testing.T, contractAddr *string) {
 			Function: funcName,
 			Inputs:   input}}
 
+	log.Printf("the length of input is %d\n", len(input))
+	log.Printf("the value of input is %v\n", input)
+
 	h.ToChains <- m
+
 
 	for {
 		select {
