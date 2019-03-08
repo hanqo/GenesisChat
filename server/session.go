@@ -134,6 +134,9 @@ type Subscription struct {
 	uaChange chan<- string
 }
 
+// kai: todo do not use global var
+var g_conaddr string
+
 func (s *Session) addSub(topic string, sub *Subscription) {
 	s.subsLock.Lock()
 	defer s.subsLock.Unlock()
@@ -1555,15 +1558,15 @@ func handleTx(s *Session, tx *MsgClientTx, id, topic string, ts time.Time) error
 func handleVote(s *Session, id, topic, user string, testMode bool) error {
 	if testMode {
 		s.queueOut(createVoteResMsgTest(id, topic, user))
-		t, err := store.Topics.Get(topic)
-		if err == nil {
+		// t, err := store.Topics.Get(topic)
+		if g_conaddr != "" {
 			// return a txres: tx sent
 			txSent := createTxResMsgTest("", "", id, topic, false)
 			s.queueOut(txSent)
-			log.Println("handleVote: topic = ", topic, " conaddr = ", t.ConAddr)
-			txhash := bc.SetContractTestMode(&t.ConAddr, "setCost")
+			log.Println("handleVote: topic = ", topic, " conaddr = ", g_conaddr)
+			txhash := bc.SetContractTestMode(&g_conaddr, "setCost")
 			// return a txres: tx confirmed
-			txConfirmed := createTxResMsgTest(*txhash, t.ConAddr, id, topic, true)
+			txConfirmed := createTxResMsgTest(*txhash, g_conaddr, id, topic, true)
 			s.queueOut(txConfirmed)
 		} else {
 			log.Println("handleVote: cannot load topic from DB: ", topic)
@@ -1592,14 +1595,15 @@ func conSub(s *Session, msg *ClientComMessage, subName string, isNewTopic bool, 
 			txhash, conaddr = bc.DeployContractTestMode()
 			// updateConAddr(msg.topic, *conaddr)
 			msg.Sub.Set.Desc.ConAddr = *conaddr
-			txConfirmed := createTxResMsgTest(*txhash, *conaddr, msg.id, msg.topic, true)
+			g_conaddr = *conaddr
+			txConfirmed := createTxResMsgTest(*txhash, g_conaddr, msg.id, msg.topic, true)
 			s.queueOut(txConfirmed)
 		} else {
-			t, err := store.Topics.Get(msg.topic)
-			if err == nil {
-				txhash = bc.SetContractTestMode(&t.ConAddr, "join")
+			// t, err := store.Topics.Get(msg.topic)
+			if g_conaddr != "" {
+				txhash = bc.SetContractTestMode(&g_conaddr, "join")
 				// return a txres: tx confirmed
-				txConfirmed := createTxResMsgTest(*txhash, t.ConAddr, msg.id, msg.topic, true)
+				txConfirmed := createTxResMsgTest(*txhash, g_conaddr, msg.id, msg.topic, true)
 				s.queueOut(txConfirmed)
 			} else {
 				log.Println("conSub: can not load topic from DB: ", msg.topic)
@@ -1646,11 +1650,11 @@ func conLeave(s *Session, msg *ClientComMessage, subName string, testMode bool) 
 		txSent := createTxResMsgTest("", "", msg.id, msg.topic, false)
 		s.queueOut(txSent)
 
-		t, err := store.Topics.Get(msg.topic)
-		if err == nil {
-			txhash := bc.SetContractTestMode(&t.ConAddr, "leave")
+		// t, err := store.Topics.Get(msg.topic)
+		if g_conaddr != "" {
+			txhash := bc.SetContractTestMode(&g_conaddr, "leave")
 			// return a txres: tx confirmed
-			txConfirmed := createTxResMsgTest(*txhash, t.ConAddr, msg.id, msg.topic, true)
+			txConfirmed := createTxResMsgTest(*txhash, g_conaddr, msg.id, msg.topic, true)
 			s.queueOut(txConfirmed)
 		} else {
 			log.Println("conLeave: can not load topic from DB: ", msg.topic)
