@@ -1560,7 +1560,7 @@ func handleVote(s *Session, id, topic, user string, testMode bool) error {
 			// return a txres: tx sent
 			txSent := createTxResMsgTest("", "", id, topic, false)
 			s.queueOut(txSent)
-			txhash := bc.SetContractTestMode(&t.ConAddr, "setCost", []string{"500"})
+			txhash := bc.SetContractTestMode(&t.ConAddr, "setCost", []string{"500", "20"})
 			// return a txres: tx confirmed
 			txConfirmed := createTxResMsgTest(*txhash, t.ConAddr, id, topic, true)
 			s.queueOut(txConfirmed)
