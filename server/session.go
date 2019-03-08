@@ -1182,6 +1182,12 @@ func (s *Session) del(msg *ClientComMessage) {
 // Not reporting any errors
 func (s *Session) note(msg *ClientComMessage) {
 
+	// kai: add speciial handing to note.what = vote for testMode
+	if msg.Note.What == "vote" {
+		go handleVote(s, msg.id, msg.topic, msg.from, true)
+		return
+	}
+
 	if s.ver == 0 || msg.from == "" {
 		// Silently ignore the message: have not received {hi} or don't know who sent the message.
 		return
