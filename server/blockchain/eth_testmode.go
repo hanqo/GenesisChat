@@ -163,7 +163,7 @@ func SetContractTestMode(contractAddr *string,funcName string) *string{
 	voteNonce := "1"
 	input := []string{"500","600"}
 
-	if  *contractAddr  == "setCost" {
+	if  funcName  == "setCost" {
 		res := VoteProcessTestMode(contractAddr, &funcName, &voteNonce)
 		input = append(input, *res.Proposal.Nonce, *res.Signature)
 	}
