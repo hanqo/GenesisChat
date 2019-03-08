@@ -3,14 +3,15 @@ package blockchain
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/tinode/chat/server/vote"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/tinode/chat/server/vote"
 	"log"
 	"math/big"
 	"time"
 )
+
 const creatorAddrTestMode = "0xb66785f087B0A100c39c39B801104D22086FF1bE"
 const creatorPrivTestMode = "E9A6D816389523F51B7CB44EB16CD661050F6F85B4268D452E4745B74619F1D2"
 
@@ -66,14 +67,16 @@ func DeployContractTestMode() (*string, *string) {
 			Function: "",
 			Inputs:   []string{"genesis001", "admin_ggg", "100", "20"}}}
 
+	log.Println("[deploy] sending request_tx to eth...")
 	h.ToChains <- m
 	for {
 		select {
 		case msg := <-h.FromChains:
 			if msg.TxSent != nil {
-
+				log.Println("[deploy] sending request_tx to eth...")
 			} else if msg.TxInfo != nil {
 
+				log.Println("[deploy] got tx info, create tx now...")
 				rawTxData2 := generateRawTxDeployContractTestMode(5000000, msg.TxInfo.GasPrice, msg.TxInfo.Nonce, msg.TxInfo.Data)
 
 				h.ToChains <- &MsgToChain{
@@ -85,7 +88,7 @@ func DeployContractTestMode() (*string, *string) {
 					SignedTx: &rawTxData2}
 
 			} else if msg.TxReceipt != nil {
-				fmt.Printf("contract deployed at addrTestModeess: %s\n", *msg.TxReceipt.ContractAddr)
+				log.Println("[deploy] contract deployed ok, address:", *msg.TxReceipt.ContractAddr)
 				return &msg.TxReceipt.TxHash, msg.TxReceipt.ContractAddr
 			}
 		}
@@ -158,14 +161,14 @@ func VoteProcessTestMode(contractAddr *string, funcName *string, voteNonce *stri
 	}
 }
 
-func SetContractTestMode(contractAddr *string,funcName string) *string{
+func SetContractTestMode(contractAddr *string, funcName string) *string {
 	h := NewETHHandler()
 	voteNonce := "1"
-	input := []string{"500","20"}
+	input := []string{}
 
-	if  funcName  == "setCost" {
+	if funcName == "setCost" {
 		res := VoteProcessTestMode(contractAddr, &funcName, &voteNonce)
-		input = append(input, *res.Proposal.Nonce, *res.Signature)
+		input = append(input, "500", "200", *res.Proposal.Nonce, *res.Signature)
 	}
 
 	log.Printf("the length of input is %d\n", len(input))
@@ -234,9 +237,9 @@ func CallContractTestMode(contractAddr *string) *MsgCallReturn {
 func TestSmartContracttTestMode() *MsgCallReturn {
 	_, contractAddr := DeployContractTestMode()
 
-	SetContractTestMode(contractAddr,"setCost")
-	SetContractTestMode(contractAddr,"join")
-	SetContractTestMode(contractAddr,"leave")
-	res:= CallContractTestMode(contractAddr)
+	SetContractTestMode(contractAddr, "setCost")
+	SetContractTestMode(contractAddr, "join")
+	SetContractTestMode(contractAddr, "leave")
+	res := CallContractTestMode(contractAddr)
 	return res
 }
