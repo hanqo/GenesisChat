@@ -41,7 +41,7 @@ func generateRawTxSetContractTestMode(contractAddr string, gas uint64, gasPrice 
 	chainID := big.NewInt(3) // ropsten
 
 	privateKey, _ := crypto.HexToECDSA(candidatePrivTestMode)
-	amount := big.NewInt(0) // 1 ether
+	amount := big.NewInt(100000) // 1 ether
 
 	tx := types.NewTransaction(nonce, recipientAddr, amount, gas, big.NewInt(gasPrice), data)
 
